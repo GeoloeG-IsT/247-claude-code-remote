@@ -12,15 +12,32 @@ STOP_REASON=$(echo "$INPUT" | jq -r '.stop_reason // ""' 2>/dev/null || echo "")
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // ""' 2>/dev/null || echo "")
 CWD=$(echo "$INPUT" | jq -r '.cwd // ""' 2>/dev/null || echo "")
 
-# Detect tmux session name (primary method: use tmux command - most reliable)
+# Detect tmux session name with multiple fallback methods
 TMUX_SESSION=""
-if [ -n "$TMUX" ]; then
+
+# Priority 1: Use CLAUDE_TMUX_SESSION env var (set by agent - most reliable)
+if [ -z "$TMUX_SESSION" ]; then
+  TMUX_SESSION="${CLAUDE_TMUX_SESSION:-}"
+fi
+
+# Priority 2: Try tmux display-message if in tmux context
+if [ -z "$TMUX_SESSION" ] && [ -n "$TMUX" ]; then
   TMUX_SESSION=$(tmux display-message -p '#{session_name}' 2>/dev/null || echo "")
 fi
 
-# Fallback: use CLAUDE_TMUX_SESSION env var (set by agent on session creation)
+# Priority 3: Query tmux by parent PID (finds session containing our shell)
 if [ -z "$TMUX_SESSION" ]; then
-  TMUX_SESSION="${CLAUDE_TMUX_SESSION:-}"
+  TMUX_SESSION=$(tmux list-panes -a -F '#{pane_pid} #{session_name}' 2>/dev/null | \
+    awk -v pid="$PPID" '$1 == pid {print $2}' | head -1 || echo "")
+fi
+
+# Priority 4: Try to find session by current tty
+if [ -z "$TMUX_SESSION" ]; then
+  CURRENT_TTY=$(tty 2>/dev/null | sed 's|/dev/||' || echo "")
+  if [ -n "$CURRENT_TTY" ]; then
+    TMUX_SESSION=$(tmux list-panes -a -F '#{pane_tty} #{session_name}' 2>/dev/null | \
+      grep "$CURRENT_TTY" | awk '{print $2}' | head -1 || echo "")
+  fi
 fi
 
 # Get project name from cwd (last component of path)

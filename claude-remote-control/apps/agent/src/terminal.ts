@@ -44,6 +44,7 @@ export function createTerminal(cwd: string, sessionName: string): Terminal {
     env: {
       ...process.env,
       TERM: 'xterm-256color',
+      CLAUDE_TMUX_SESSION: sessionName, // Always set for hook detection
       PATH: `/opt/homebrew/bin:${process.env.PATH}`,
     } as { [key: string]: string },
   });

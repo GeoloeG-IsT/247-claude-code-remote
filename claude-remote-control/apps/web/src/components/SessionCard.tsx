@@ -1,8 +1,8 @@
 'use client';
 
-import { forwardRef, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Zap, Clock, MessageSquare, Shield, CheckCircle, Circle, Loader2, X } from 'lucide-react';
+import { forwardRef, useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Zap, Clock, MessageSquare, Shield, CheckCircle, Circle, Loader2, X, Activity } from 'lucide-react';
 import { type SessionInfo } from '@/lib/notifications';
 import { type SessionStatus } from './ui/status-badge';
 import { ConfirmDialog } from './ui/confirm-dialog';
@@ -81,10 +81,29 @@ const statusConfig: Record<
   },
 };
 
+// Format time since status change
+function formatStatusTime(timestamp: number | undefined): string {
+  if (!timestamp) return '';
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (seconds < 5) return 'just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ago`;
+}
+
 export const SessionCard = forwardRef<HTMLButtonElement, SessionCardProps>(
   ({ session, isActive, isCollapsed, index, onClick, onKill, onMouseEnter, onMouseLeave }, ref) => {
     const [showKillConfirm, setShowKillConfirm] = useState(false);
     const [isKilling, setIsKilling] = useState(false);
+    const [, setTick] = useState(0);
+
+    // Update time display every 10 seconds
+    useEffect(() => {
+      const interval = setInterval(() => setTick((t) => t + 1), 10000);
+      return () => clearInterval(interval);
+    }, []);
 
     const status = session.status as SessionStatus;
     const config = statusConfig[status] || statusConfig.idle;
@@ -96,6 +115,7 @@ export const SessionCard = forwardRef<HTMLButtonElement, SessionCardProps>(
 
     // Check if needs attention
     const needsAttention = ['waiting', 'permission'].includes(status);
+    const statusTime = formatStatusTime(session.lastStatusChange);
 
     const handleKillClick = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -242,23 +262,31 @@ export const SessionCard = forwardRef<HTMLButtonElement, SessionCardProps>(
           )}
 
           <div className="flex items-start gap-3">
-            {/* Status Icon */}
-            <div
-              className={cn(
-                'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0',
-                config.bgColor,
-                'border',
-                config.borderColor
-              )}
-            >
-              <Icon
+            {/* Status Icon with transition animation */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={status}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                transition={{ duration: 0.2 }}
                 className={cn(
-                  'w-5 h-5',
-                  config.color,
-                  status === 'running' && 'animate-spin'
+                  'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0',
+                  config.bgColor,
+                  'border',
+                  config.borderColor,
+                  needsAttention && 'ring-2 ring-orange-500/40 ring-offset-1 ring-offset-zinc-900'
                 )}
-              />
-            </div>
+              >
+                <Icon
+                  className={cn(
+                    'w-5 h-5',
+                    config.color,
+                    status === 'running' && 'animate-spin'
+                  )}
+                />
+              </motion.div>
+            </AnimatePresence>
 
             {/* Content */}
             <div className="flex-1 min-w-0 pr-6">
@@ -274,26 +302,42 @@ export const SessionCard = forwardRef<HTMLButtonElement, SessionCardProps>(
               </div>
 
               <div className="flex items-center gap-2 mt-1">
-                <span
-                  className={cn(
-                    'text-xs px-1.5 py-0.5 rounded font-medium',
-                    config.bgColor,
-                    config.color
-                  )}
-                >
-                  {config.label}
-                </span>
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={status}
+                    initial={{ y: -5, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 5, opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className={cn(
+                      'text-xs px-1.5 py-0.5 rounded font-medium',
+                      config.bgColor,
+                      config.color
+                    )}
+                  >
+                    {config.label}
+                  </motion.span>
+                </AnimatePresence>
+                {statusTime && (
+                  <span className="text-xs text-white/40 flex items-center gap-1">
+                    <Activity className="w-3 h-3" />
+                    {statusTime}
+                  </span>
+                )}
+              </div>
+
+              {/* Session info */}
+              <div className="flex items-center gap-2 mt-1.5">
                 <span className="text-xs text-white/30 truncate">
                   {session.project}
                 </span>
-              </div>
-
-              {/* Last activity */}
-              <div className="flex items-center gap-1 mt-2 text-xs text-white/30">
-                <Clock className="w-3 h-3" />
-                <span>{formatRelativeTime(session.createdAt)}</span>
+                <span className="text-white/20">·</span>
+                <div className="flex items-center gap-1 text-xs text-white/30">
+                  <Clock className="w-3 h-3" />
+                  <span>{formatRelativeTime(session.createdAt)}</span>
+                </div>
                 {session.statusSource === 'hook' && (
-                  <span className="ml-1 flex items-center gap-0.5 text-emerald-400/60">
+                  <span className="flex items-center gap-0.5 text-emerald-400/60" title="Real-time via WebSocket">
                     <Zap className="w-3 h-3" />
                   </span>
                 )}

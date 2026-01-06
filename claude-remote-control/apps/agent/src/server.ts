@@ -15,7 +15,7 @@ import {
 } from './editor.js';
 import { cloneRepo, extractProjectName } from './git.js';
 import config from '../config.json' with { type: 'json' };
-import type { WSMessageToAgent, AgentConfig } from '@claude-remote/shared';
+import type { WSMessageToAgent, AgentConfig, WSSessionInfo, WSStatusMessageFromAgent } from '@claude-remote/shared';
 
 // Store session status from Claude Code hooks (more reliable than tmux heuristics)
 interface HookStatus {
@@ -38,6 +38,39 @@ const pendingTools = new Map<string, { toolName: string; timestamp: number }>();
 
 // Track active WebSocket connections per session
 const activeConnections = new Map<string, Set<WebSocket>>();
+
+// Track WebSocket subscribers for status updates (real-time push)
+const statusSubscribers = new Set<WebSocket>();
+
+// Broadcast status update to all subscribers
+function broadcastStatusUpdate(session: WSSessionInfo) {
+  if (statusSubscribers.size === 0) return;
+
+  const message: WSStatusMessageFromAgent = { type: 'status-update', session };
+  const messageStr = JSON.stringify(message);
+
+  for (const ws of statusSubscribers) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(messageStr);
+    }
+  }
+  console.log(`[Status WS] Broadcast status update for ${session.name}: ${session.status} to ${statusSubscribers.size} subscribers`);
+}
+
+// Broadcast session removed to all subscribers
+function broadcastSessionRemoved(sessionName: string) {
+  if (statusSubscribers.size === 0) return;
+
+  const message: WSStatusMessageFromAgent = { type: 'session-removed', sessionName };
+  const messageStr = JSON.stringify(message);
+
+  for (const ws of statusSubscribers) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(messageStr);
+    }
+  }
+  console.log(`[Status WS] Broadcast session removed: ${sessionName}`);
+}
 
 // Generate human-readable session names with project prefix
 function generateSessionName(project: string): string {
@@ -76,15 +109,15 @@ export function createServer() {
   });
 
   // WebSocket proxy events for debugging
-  editorProxy.on('proxyReqWs', (proxyReq, req, socket) => {
+  editorProxy.on('proxyReqWs', (proxyReq, _req, _socket) => {
     console.log('[Editor Proxy] WS request to:', proxyReq.path);
   });
 
-  editorProxy.on('open', (proxySocket) => {
+  editorProxy.on('open', (_proxySocket) => {
     console.log('[Editor Proxy] WS connection opened');
   });
 
-  editorProxy.on('close', (res, socket, head) => {
+  editorProxy.on('close', (_res, _socket, _head) => {
     console.log('[Editor Proxy] WS connection closed');
   });
 
@@ -96,8 +129,9 @@ export function createServer() {
     const sessionName = urlSessionName || generateSessionName(project || 'unknown');
 
     // Validate project - if whitelist is empty, allow any project
-    const hasWhitelist = config.projects.whitelist && config.projects.whitelist.length > 0;
-    const isAllowed = hasWhitelist ? config.projects.whitelist.includes(project!) : true;
+    const whitelist = config.projects.whitelist as string[];
+    const hasWhitelist = whitelist && whitelist.length > 0;
+    const isAllowed = hasWhitelist ? whitelist.includes(project!) : true;
     if (!project || !isAllowed) {
       ws.close(1008, 'Project not allowed');
       return;
@@ -376,7 +410,21 @@ export function createServer() {
     // Priority 1: Store by tmux session name (REQUIRED for per-session status)
     if (tmux_session) {
       const existing = tmuxSessionStatus.get(tmux_session);
-      tmuxSessionStatus.set(tmux_session, createHookData(existing));
+      const hookData = createHookData(existing);
+      tmuxSessionStatus.set(tmux_session, hookData);
+
+      // Broadcast status update to WebSocket subscribers
+      const [sessionProject] = tmux_session.split('--');
+      broadcastStatusUpdate({
+        name: tmux_session,
+        project: sessionProject || project,
+        status: hookData.status,
+        statusSource: 'hook',
+        lastEvent: hookData.lastEvent,
+        lastStatusChange: hookData.lastStatusChange,
+        createdAt: timestamp || now, // Best approximation without querying tmux
+        lastActivity: undefined,
+      });
     } else {
       // Warning: tmux_session is required for proper per-session status tracking
       console.warn(`[Hook] WARNING: Missing tmux_session for ${event} (session_id=${session_id}, project=${project})`);
@@ -528,6 +576,11 @@ export function createServer() {
     try {
       await execAsync(`tmux kill-session -t "${sessionName}" 2>/dev/null`);
       console.log(`Killed tmux session: ${sessionName}`);
+
+      // Clean up status tracking and broadcast removal
+      tmuxSessionStatus.delete(sessionName);
+      broadcastSessionRemoved(sessionName);
+
       res.json({ success: true, message: `Session ${sessionName} killed` });
     } catch {
       res.status(404).json({ error: 'Session not found or already killed' });
@@ -538,8 +591,9 @@ export function createServer() {
 
   // Helper to check if project is allowed (whitelist empty = allow any)
   const isProjectAllowed = (project: string): boolean => {
-    const hasWhitelist = config.projects.whitelist && config.projects.whitelist.length > 0;
-    return hasWhitelist ? config.projects.whitelist.includes(project) : true;
+    const whitelist = config.projects.whitelist as string[];
+    const hasWhitelist = whitelist && whitelist.length > 0;
+    return hasWhitelist ? whitelist.includes(project) : true;
   };
 
   // Get editor status for a project
@@ -638,6 +692,94 @@ export function createServer() {
     if (url.pathname === '/terminal') {
       wss.handleUpgrade(req, socket, head, (ws) => {
         wss.emit('connection', ws, req);
+      });
+      return;
+    }
+
+    // Handle status WebSocket (real-time session status updates)
+    if (url.pathname === '/status') {
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        console.log('[Status WS] New subscriber connected');
+        statusSubscribers.add(ws);
+
+        // Send initial session list
+        (async () => {
+          try {
+            const { exec } = await import('child_process');
+            const { promisify } = await import('util');
+            const execAsync = promisify(exec);
+
+            const { stdout } = await execAsync(
+              'tmux list-sessions -F "#{session_name}|#{session_created}" 2>/dev/null'
+            );
+
+            const sessions: WSSessionInfo[] = [];
+            const now = Date.now();
+            const HOOK_TTL = 2 * 60 * 1000;
+
+            for (const line of stdout.trim().split('\n').filter(Boolean)) {
+              const [name, created] = line.split('|');
+              const [project] = name.split('--');
+
+              let status: WSSessionInfo['status'] = 'idle';
+              let statusSource: WSSessionInfo['statusSource'] = 'tmux';
+              let lastEvent: string | undefined;
+              let lastStatusChange: number | undefined;
+              let lastActivity = '';
+
+              const hookData = tmuxSessionStatus.get(name);
+              if (hookData && (now - hookData.lastActivity < HOOK_TTL)) {
+                status = hookData.status;
+                statusSource = 'hook';
+                lastEvent = hookData.lastEvent;
+                lastStatusChange = hookData.lastStatusChange;
+              } else {
+                try {
+                  const { stdout: paneContent } = await execAsync(
+                    `tmux capture-pane -t "${name}" -p -S -3 2>/dev/null`
+                  );
+                  lastActivity = paneContent.trim().split('\n').pop() || '';
+                  if (lastActivity.match(/[$>%#]\s*$/) || lastActivity.includes('Claude >')) {
+                    status = 'waiting';
+                  } else if (lastActivity.length > 0) {
+                    status = 'running';
+                  }
+                } catch {
+                  // Session exists but pane capture failed
+                }
+              }
+
+              sessions.push({
+                name,
+                project,
+                createdAt: parseInt(created) * 1000,
+                status,
+                statusSource,
+                lastActivity: lastActivity.slice(-80),
+                lastEvent,
+                lastStatusChange,
+              });
+            }
+
+            const message: WSStatusMessageFromAgent = { type: 'sessions-list', sessions };
+            ws.send(JSON.stringify(message));
+            console.log(`[Status WS] Sent initial sessions list: ${sessions.length} sessions`);
+          } catch (err) {
+            console.error('[Status WS] Failed to get initial sessions:', err);
+            const message: WSStatusMessageFromAgent = { type: 'sessions-list', sessions: [] };
+            ws.send(JSON.stringify(message));
+          }
+        })();
+
+        ws.on('close', () => {
+          statusSubscribers.delete(ws);
+          console.log(`[Status WS] Subscriber disconnected (remaining: ${statusSubscribers.size})`);
+        });
+
+        ws.on('error', (err) => {
+          console.error('[Status WS] Error:', err);
+          statusSubscribers.delete(ws);
+        });
       });
       return;
     }

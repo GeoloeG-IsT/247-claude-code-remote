@@ -32,7 +32,7 @@ export interface User {
   createdAt: Date;
 }
 
-// WebSocket message types - Client to Agent
+// WebSocket message types - Client to Agent (Terminal)
 export type WSMessageToAgent =
   | { type: 'input'; data: string }
   | { type: 'resize'; cols: number; rows: number }
@@ -40,13 +40,40 @@ export type WSMessageToAgent =
   | { type: 'ping' }
   | { type: 'request-history'; lines?: number };
 
-// WebSocket message types - Agent to Client
+// WebSocket message types - Agent to Client (Terminal)
 export type WSMessageFromAgent =
   | { type: 'output'; data: string }
   | { type: 'connected'; session: string }
   | { type: 'disconnected' }
   | { type: 'pong' }
   | { type: 'history'; data: string; lines: number };
+
+// Session status types for real-time updates
+export type SessionStatus = 'running' | 'waiting' | 'permission' | 'stopped' | 'ended' | 'idle';
+export type StatusSource = 'hook' | 'tmux';
+
+// Session info for status WebSocket
+export interface WSSessionInfo {
+  name: string;
+  project: string;
+  status: SessionStatus;
+  statusSource: StatusSource;
+  lastEvent?: string;
+  lastStatusChange?: number;
+  createdAt: number;
+  lastActivity?: string;
+}
+
+// WebSocket message types - Client to Agent (Status channel)
+export type WSStatusMessageToAgent =
+  | { type: 'status-subscribe' }
+  | { type: 'status-unsubscribe' };
+
+// WebSocket message types - Agent to Client (Status channel)
+export type WSStatusMessageFromAgent =
+  | { type: 'sessions-list'; sessions: WSSessionInfo[] }
+  | { type: 'status-update'; session: WSSessionInfo }
+  | { type: 'session-removed'; sessionName: string };
 
 // API types
 export interface RegisterMachineRequest {

@@ -14,6 +14,7 @@ import {
   requestNotificationPermission,
   showSessionNotification,
 } from '@/lib/notifications';
+import type { WSStatusMessageFromAgent } from '@claude-remote/shared';
 
 export interface Machine {
   id: string;
@@ -32,6 +33,7 @@ interface MachineSessionData {
   sessions: SessionInfo[];
   lastFetch: number;
   error: string | null;
+  wsConnected: boolean;
 }
 
 interface SessionPollingContextValue {
@@ -41,13 +43,16 @@ interface SessionPollingContextValue {
   setMachines: (machines: Machine[]) => void;
   isLoading: (machineId: string) => boolean;
   getError: (machineId: string) => string | null;
+  isWsConnected: (machineId: string) => boolean;
 }
 
 const SessionPollingContext = createContext<SessionPollingContextValue | null>(null);
 
-const POLLING_INTERVAL = 3000;
+const FALLBACK_POLLING_INTERVAL = 30000; // Fallback HTTP poll every 30s (when WS connected)
 const MACHINES_POLLING_INTERVAL = 30000;
 const FETCH_TIMEOUT = 5000;
+const WS_RECONNECT_BASE_DELAY = 1000;
+const WS_RECONNECT_MAX_DELAY = 30000;
 
 export function SessionPollingProvider({ children }: { children: ReactNode }) {
   const [machines, setMachinesState] = useState<Machine[]>([]);
@@ -57,23 +62,27 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
   const [loadingMachines, setLoadingMachines] = useState<Set<string>>(new Set());
 
   const prevSessionsRef = useRef<Map<string, SessionInfo[]>>(new Map());
+  const wsConnectionsRef = useRef<Map<string, WebSocket>>(new Map());
+  const wsConnectedRef = useRef<Set<string>>(new Set()); // Track connected machines via ref for polling
+  const wsReconnectDelaysRef = useRef<Map<string, number>>(new Map());
+  const wsReconnectTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   useEffect(() => {
     requestNotificationPermission();
   }, []);
 
-  // Fetch machines from API (self-sufficient, doesn't depend on dashboard)
+  // Fetch machines from API
   useEffect(() => {
     const fetchMachines = async () => {
       try {
         const response = await fetch('/api/machines');
         if (response.ok) {
           const data = await response.json();
-          console.log('[Notifications] Fetched machines:', data.map((m: Machine) => ({ id: m.id, name: m.name, status: m.status })));
+          console.log('[Sessions] Fetched machines:', data.map((m: Machine) => ({ id: m.id, name: m.name, status: m.status })));
           setMachinesState(data);
         }
       } catch (err) {
-        console.error('Failed to fetch machines for polling:', err);
+        console.error('Failed to fetch machines:', err);
       }
     };
 
@@ -89,6 +98,9 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
 
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+
+      // Check WS connected via ref (always current)
+      const isWsConnected = wsConnectedRef.current.has(machine.id);
 
       try {
         const response = await fetch(`${protocol}://${agentUrl}/api/sessions`, {
@@ -106,6 +118,7 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
           sessions,
           lastFetch: Date.now(),
           error: null,
+          wsConnected: isWsConnected,
         };
       } catch (err) {
         const errorMsg =
@@ -120,6 +133,7 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
           sessions: [],
           lastFetch: Date.now(),
           error: errorMsg,
+          wsConnected: isWsConnected,
         };
       } finally {
         clearTimeout(timeout);
@@ -132,36 +146,17 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
     (machineId: string, machineName: string, newSessions: SessionInfo[]) => {
       const prevSessions = prevSessionsRef.current.get(machineId) || [];
 
-      console.log('[Notifications] Checking sessions:', {
-        machineId,
-        machineName,
-        newSessions: newSessions.map((s) => ({ name: s.name, status: s.status, lastStatusChange: s.lastStatusChange })),
-        prevSessions: prevSessions.map((s) => ({ name: s.name, status: s.status, lastStatusChange: s.lastStatusChange })),
-      });
-
       for (const session of newSessions) {
         const prevSession = prevSessions.find((s) => s.name === session.name);
         const isActionable = ['permission', 'stopped', 'waiting'].includes(session.status);
 
-        // New logic: notify if timestamp changed AND status is actionable
         const isNewEvent =
           !prevSession ||
           (session.lastStatusChange !== undefined &&
             session.lastStatusChange !== prevSession.lastStatusChange);
 
-        console.log('[Notifications] Session check:', {
-          sessionName: session.name,
-          currentStatus: session.status,
-          prevStatus: prevSession?.status,
-          currentTs: session.lastStatusChange,
-          prevTs: prevSession?.lastStatusChange,
-          isNewEvent,
-          isActionable,
-          shouldNotify: isNewEvent && isActionable,
-        });
-
         if (isNewEvent && isActionable) {
-          console.log('[Notifications] TRIGGERING notification for:', session.name);
+          console.log('[Notifications] TRIGGERING notification for:', session.name, session.status);
           showSessionNotification(machineId, machineName, session);
         }
       }
@@ -171,14 +166,241 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  // Update a single session from WebSocket
+  const updateSingleSession = useCallback(
+    (machineId: string, machineName: string, session: SessionInfo) => {
+      setSessionsByMachine((prev) => {
+        const next = new Map(prev);
+        const existingData = next.get(machineId);
+
+        if (existingData) {
+          const sessionIndex = existingData.sessions.findIndex((s) => s.name === session.name);
+          const updatedSessions = [...existingData.sessions];
+
+          if (sessionIndex >= 0) {
+            updatedSessions[sessionIndex] = session;
+          } else {
+            updatedSessions.push(session);
+          }
+
+          next.set(machineId, {
+            ...existingData,
+            sessions: updatedSessions,
+            lastFetch: Date.now(),
+          });
+
+          // Check for notifications
+          checkForNotifications(machineId, machineName, [session]);
+        }
+
+        return next;
+      });
+    },
+    [checkForNotifications]
+  );
+
+  // Remove a session from WebSocket
+  const removeSession = useCallback((machineId: string, sessionName: string) => {
+    setSessionsByMachine((prev) => {
+      const next = new Map(prev);
+      const existingData = next.get(machineId);
+
+      if (existingData) {
+        next.set(machineId, {
+          ...existingData,
+          sessions: existingData.sessions.filter((s) => s.name !== sessionName),
+          lastFetch: Date.now(),
+        });
+      }
+
+      return next;
+    });
+  }, []);
+
+  // Connect WebSocket for a machine
+  const connectWebSocket = useCallback(
+    (machine: Machine) => {
+      const agentUrl = machine.config?.agentUrl || 'localhost:4678';
+      const wsProtocol = agentUrl.includes('localhost') ? 'ws' : 'wss';
+      const wsUrl = `${wsProtocol}://${agentUrl}/status`;
+
+      // Close existing connection if any
+      const existingWs = wsConnectionsRef.current.get(machine.id);
+      if (existingWs) {
+        existingWs.close();
+        wsConnectionsRef.current.delete(machine.id);
+      }
+
+      console.log(`[WS] Connecting to ${wsUrl} for machine ${machine.name}`);
+
+      try {
+        const ws = new WebSocket(wsUrl);
+        wsConnectionsRef.current.set(machine.id, ws);
+
+        ws.onopen = () => {
+          console.log(`[WS] Connected to ${machine.name}`);
+          wsReconnectDelaysRef.current.set(machine.id, WS_RECONNECT_BASE_DELAY);
+          wsConnectedRef.current.add(machine.id); // Track via ref for polling
+
+          setSessionsByMachine((prev) => {
+            const next = new Map(prev);
+            const existingData = next.get(machine.id);
+            if (existingData) {
+              next.set(machine.id, { ...existingData, wsConnected: true, error: null });
+            } else {
+              next.set(machine.id, {
+                machineId: machine.id,
+                machineName: machine.name,
+                agentUrl,
+                sessions: [],
+                lastFetch: Date.now(),
+                error: null,
+                wsConnected: true,
+              });
+            }
+            return next;
+          });
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const msg: WSStatusMessageFromAgent = JSON.parse(event.data);
+
+            switch (msg.type) {
+              case 'sessions-list':
+                console.log(`[WS] Received sessions-list: ${msg.sessions.length} sessions`);
+                setSessionsByMachine((prev) => {
+                  const next = new Map(prev);
+                  next.set(machine.id, {
+                    machineId: machine.id,
+                    machineName: machine.name,
+                    agentUrl,
+                    sessions: msg.sessions,
+                    lastFetch: Date.now(),
+                    error: null,
+                    wsConnected: true,
+                  });
+                  return next;
+                });
+                // Update prev sessions ref for notification tracking
+                prevSessionsRef.current.set(machine.id, [...msg.sessions]);
+                break;
+
+              case 'status-update':
+                console.log(`[WS] Status update: ${msg.session.name} → ${msg.session.status}`);
+                updateSingleSession(machine.id, machine.name, msg.session);
+                break;
+
+              case 'session-removed':
+                console.log(`[WS] Session removed: ${msg.sessionName}`);
+                removeSession(machine.id, msg.sessionName);
+                break;
+            }
+          } catch (err) {
+            console.error('[WS] Failed to parse message:', err);
+          }
+        };
+
+        ws.onclose = (event) => {
+          console.log(`[WS] Disconnected from ${machine.name}:`, event.code, event.reason);
+          wsConnectionsRef.current.delete(machine.id);
+          wsConnectedRef.current.delete(machine.id); // Remove from ref
+
+          setSessionsByMachine((prev) => {
+            const next = new Map(prev);
+            const existingData = next.get(machine.id);
+            if (existingData) {
+              next.set(machine.id, { ...existingData, wsConnected: false });
+            }
+            return next;
+          });
+
+          // Schedule reconnection with exponential backoff
+          const currentDelay = wsReconnectDelaysRef.current.get(machine.id) || WS_RECONNECT_BASE_DELAY;
+          const nextDelay = Math.min(currentDelay * 2, WS_RECONNECT_MAX_DELAY);
+          wsReconnectDelaysRef.current.set(machine.id, nextDelay);
+
+          console.log(`[WS] Reconnecting to ${machine.name} in ${currentDelay}ms`);
+
+          const timeout = setTimeout(() => {
+            // Only reconnect if machine is still online
+            const currentMachine = machines.find((m) => m.id === machine.id);
+            if (currentMachine?.status === 'online') {
+              connectWebSocket(currentMachine);
+            }
+          }, currentDelay);
+
+          wsReconnectTimeoutsRef.current.set(machine.id, timeout);
+        };
+
+        ws.onerror = (event) => {
+          console.error(`[WS] Error for ${machine.name}:`, event);
+        };
+      } catch (err) {
+        console.error(`[WS] Failed to create WebSocket for ${machine.name}:`, err);
+      }
+    },
+    [machines, updateSingleSession, removeSession]
+  );
+
+  // Manage WebSocket connections based on online machines
+  useEffect(() => {
+    const onlineMachines = machines.filter((m) => m.status === 'online');
+
+    // Connect to new online machines
+    for (const machine of onlineMachines) {
+      if (!wsConnectionsRef.current.has(machine.id)) {
+        connectWebSocket(machine);
+      }
+    }
+
+    // Close connections for offline machines
+    for (const [machineId, ws] of wsConnectionsRef.current) {
+      const machine = machines.find((m) => m.id === machineId);
+      if (!machine || machine.status !== 'online') {
+        ws.close();
+        wsConnectionsRef.current.delete(machineId);
+
+        // Clear reconnect timeout
+        const timeout = wsReconnectTimeoutsRef.current.get(machineId);
+        if (timeout) {
+          clearTimeout(timeout);
+          wsReconnectTimeoutsRef.current.delete(machineId);
+        }
+      }
+    }
+
+    // Cleanup on unmount
+    return () => {
+      for (const ws of wsConnectionsRef.current.values()) {
+        ws.close();
+      }
+      wsConnectionsRef.current.clear();
+
+      for (const timeout of wsReconnectTimeoutsRef.current.values()) {
+        clearTimeout(timeout);
+      }
+      wsReconnectTimeoutsRef.current.clear();
+    };
+  }, [machines, connectWebSocket]);
+
+  // Fallback HTTP polling (less frequent when WS is working)
   const pollAllMachines = useCallback(async () => {
     const onlineMachines = machines.filter((m) => m.status === 'online');
 
-    console.log('[Notifications] Polling machines:', onlineMachines.length, 'online');
-
     if (onlineMachines.length === 0) return;
 
-    const results = await Promise.all(onlineMachines.map((machine) => fetchSessionsForMachine(machine)));
+    // Only poll machines that don't have WS connected (use ref for instant access)
+    const machinesToPoll = onlineMachines.filter((m) => !wsConnectedRef.current.has(m.id));
+
+    if (machinesToPoll.length === 0) {
+      console.log('[Polling] All machines have WS connected, skipping HTTP poll');
+      return;
+    }
+
+    console.log('[Polling] HTTP polling', machinesToPoll.length, 'machines without WS');
+
+    const results = await Promise.all(machinesToPoll.map((machine) => fetchSessionsForMachine(machine)));
 
     setSessionsByMachine((prev) => {
       const next = new Map(prev);
@@ -220,11 +442,12 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
     [machines, fetchSessionsForMachine, checkForNotifications]
   );
 
+  // Fallback polling interval
   useEffect(() => {
     if (machines.length === 0) return;
 
     pollAllMachines();
-    const interval = setInterval(pollAllMachines, POLLING_INTERVAL);
+    const interval = setInterval(pollAllMachines, FALLBACK_POLLING_INTERVAL);
     return () => clearInterval(interval);
   }, [pollAllMachines, machines.length]);
 
@@ -236,6 +459,7 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
     setMachines: setMachinesState,
     isLoading: (machineId: string) => loadingMachines.has(machineId),
     getError: (machineId: string) => sessionsByMachine.get(machineId)?.error || null,
+    isWsConnected: (machineId: string) => sessionsByMachine.get(machineId)?.wsConnected ?? false,
   };
 
   return (
