@@ -21,22 +21,22 @@ export function createTerminal(cwd: string, sessionName: string): Terminal {
   try {
     execSync(`tmux has-session -t "${sessionName}" 2>/dev/null`);
     existingSession = true;
+    console.log(`[Terminal] Session '${sessionName}' exists, will attach`);
   } catch {
     existingSession = false;
+    console.log(`[Terminal] Session '${sessionName}' does not exist, will create`);
   }
 
   // Use tmux for session persistence
-  // -A = attach if session exists, create if not
-  // -s = session name
-  // -c = working directory
-  // -e = set environment variable (so Claude hooks can identify this session)
-  const shell = pty.spawn('tmux', [
-    'new-session',
-    '-A',
-    '-s', sessionName,
-    '-c', cwd,
-    '-e', `CLAUDE_TMUX_SESSION=${sessionName}`,
-  ], {
+  // For existing sessions: use attach-session (more reliable)
+  // For new sessions: use new-session with -A flag
+  const tmuxArgs = existingSession
+    ? ['attach-session', '-t', sessionName]
+    : ['new-session', '-A', '-s', sessionName, '-c', cwd, '-e', `CLAUDE_TMUX_SESSION=${sessionName}`];
+
+  console.log(`[Terminal] Spawning: tmux ${tmuxArgs.join(' ')}`);
+
+  const shell = pty.spawn('tmux', tmuxArgs, {
     name: 'xterm-256color',
     cols: 120,
     rows: 30,
@@ -46,6 +46,21 @@ export function createTerminal(cwd: string, sessionName: string): Terminal {
       TERM: 'xterm-256color',
       PATH: `/opt/homebrew/bin:${process.env.PATH}`,
     } as { [key: string]: string },
+  });
+
+  // Debug: log any immediate output or errors
+  let initialOutput = '';
+  const debugHandler = (data: string) => {
+    initialOutput += data;
+    if (initialOutput.length < 500) {
+      console.log(`[Terminal] Initial output: ${data.substring(0, 100)}`);
+    }
+  };
+  shell.onData(debugHandler);
+
+  // Debug: log when shell exits
+  shell.onExit(({ exitCode, signal }) => {
+    console.log(`[Terminal] Shell exited: code=${exitCode}, signal=${signal}, session='${sessionName}'`);
   });
 
   // If new session, configure tmux options

@@ -229,6 +229,7 @@ export default function TerminalPage() {
 
       {selectedProject && (
         <Terminal
+          key={`${selectedProject}-${selectedSession || 'new'}`}
           agentUrl={agentUrl}
           project={selectedProject}
           sessionName={selectedSession || undefined}

@@ -16,6 +16,16 @@ interface TerminalProps {
   sessionName?: string;
 }
 
+// Generate human-readable session names with project prefix (same as agent)
+function generateSessionName(project: string): string {
+  const adjectives = ['brave', 'swift', 'calm', 'bold', 'wise', 'keen', 'fair', 'wild', 'bright', 'cool'];
+  const nouns = ['lion', 'hawk', 'wolf', 'bear', 'fox', 'owl', 'deer', 'lynx', 'eagle', 'tiger'];
+  const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+  const num = Math.floor(Math.random() * 100);
+  return `${project}--${adj}-${noun}-${num}`;
+}
+
 export function Terminal({ agentUrl, project, sessionName }: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -29,6 +39,13 @@ export function Terminal({ agentUrl, project, sessionName }: TerminalProps) {
   const fitAddonRef = useRef<FitAddon | null>(null);
   const searchAddonRef = useRef<SearchAddon | null>(null);
   const webglAddonRef = useRef<WebglAddon | null>(null);
+
+  // Generate session name ONCE on first render, persisted across re-mounts
+  const generatedSessionRef = useRef<string | null>(null);
+  if (!sessionName && !generatedSessionRef.current) {
+    generatedSessionRef.current = generateSessionName(project);
+  }
+  const effectiveSessionName = sessionName || generatedSessionRef.current || '';
 
   // Scroll to bottom handler
   const scrollToBottom = useCallback(() => {
@@ -106,135 +123,156 @@ export function Terminal({ agentUrl, project, sessionName }: TerminalProps) {
   useEffect(() => {
     if (!terminalRef.current) return;
 
-    // Initialize xterm.js with enhanced options
-    const term = new XTerm({
-      cursorBlink: true,
-      fontSize: 14,
-      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-      scrollback: 15000,
-      scrollSensitivity: 1,
-      fastScrollSensitivity: 5,
-      fastScrollModifier: 'alt',
-      smoothScrollDuration: 100,
-      theme: {
-        background: '#1a1a2e',
-        foreground: '#eee',
-        cursor: '#f97316',
-        selectionBackground: '#44475a',
-      },
-    });
+    // Track cleanup state and resources
+    let cancelled = false;
+    let term: XTerm | null = null;
+    let ws: WebSocket | null = null;
+    let handleResize: (() => void) | null = null;
 
-    // Load addons
-    const fitAddon = new FitAddon();
-    const searchAddon = new SearchAddon();
+    // Debounce connection to avoid React Strict Mode double-mount issues
+    const connectTimeout = setTimeout(() => {
+      if (cancelled || !terminalRef.current) return;
 
-    term.loadAddon(fitAddon);
-    term.loadAddon(new WebLinksAddon());
-    term.loadAddon(searchAddon);
-
-    term.open(terminalRef.current);
-
-    // Try WebGL renderer, fall back to Canvas
-    try {
-      const webglAddon = new WebglAddon();
-      webglAddon.onContextLoss(() => {
-        webglAddon.dispose();
-        webglAddonRef.current = null;
-        term.loadAddon(new CanvasAddon());
+      // Initialize xterm.js with enhanced options
+      term = new XTerm({
+        cursorBlink: true,
+        fontSize: 14,
+        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+        scrollback: 15000,
+        scrollSensitivity: 1,
+        fastScrollSensitivity: 5,
+        fastScrollModifier: 'alt',
+        smoothScrollDuration: 100,
+        theme: {
+          background: '#1a1a2e',
+          foreground: '#eee',
+          cursor: '#f97316',
+          selectionBackground: '#44475a',
+        },
       });
-      term.loadAddon(webglAddon);
-      webglAddonRef.current = webglAddon;
-    } catch (e) {
-      console.warn('WebGL not available, using Canvas renderer');
-      term.loadAddon(new CanvasAddon());
-    }
 
-    fitAddon.fit();
+      // Load addons
+      const fitAddon = new FitAddon();
+      const searchAddon = new SearchAddon();
 
-    xtermRef.current = term;
-    fitAddonRef.current = fitAddon;
-    searchAddonRef.current = searchAddon;
+      term.loadAddon(fitAddon);
+      term.loadAddon(new WebLinksAddon());
+      term.loadAddon(searchAddon);
 
-    // Track scroll position
-    term.onScroll(() => {
-      const buffer = term.buffer.active;
-      const isBottom = buffer.viewportY >= buffer.baseY;
-      setIsAtBottom(isBottom);
-    });
+      term.open(terminalRef.current);
 
-    // Connect WebSocket
-    const wsProtocol = agentUrl.includes('localhost') ? 'ws' : 'wss';
-    const wsUrl = `${wsProtocol}://${agentUrl}/terminal?project=${encodeURIComponent(project)}&session=${encodeURIComponent(sessionName || '')}`;
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      setConnected(true);
-      term.write('\r\n\x1b[32mConnected to ' + agentUrl + '\x1b[0m\r\n\r\n');
-
-      ws.send(
-        JSON.stringify({
-          type: 'resize',
-          cols: term.cols,
-          rows: term.rows,
-        })
-      );
-    };
-
-    ws.onmessage = (event) => {
+      // Try WebGL renderer, fall back to Canvas
       try {
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'pong') return;
-        if (msg.type === 'history') {
-          // Write history and scroll to bottom
-          term.write(msg.data);
-          term.scrollToBottom();
-          return;
-        }
+        const webglAddon = new WebglAddon();
+        webglAddon.onContextLoss(() => {
+          webglAddon.dispose();
+          webglAddonRef.current = null;
+          if (term) term.loadAddon(new CanvasAddon());
+        });
+        term.loadAddon(webglAddon);
+        webglAddonRef.current = webglAddon;
       } catch {
-        // Raw terminal output
-        term.write(event.data);
+        console.warn('WebGL not available, using Canvas renderer');
+        term.loadAddon(new CanvasAddon());
       }
-    };
 
-    ws.onclose = () => {
-      setConnected(false);
-      term.write('\r\n\x1b[31mDisconnected\x1b[0m\r\n');
-    };
-
-    ws.onerror = (err) => {
-      console.error('WebSocket error:', err);
-      term.write('\r\n\x1b[31mConnection error\x1b[0m\r\n');
-    };
-
-    // Send input to agent
-    term.onData((data) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'input', data }));
-      }
-    });
-
-    // Handle resize
-    const handleResize = () => {
       fitAddon.fit();
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(
+
+      xtermRef.current = term;
+      fitAddonRef.current = fitAddon;
+      searchAddonRef.current = searchAddon;
+
+      // Track scroll position
+      term.onScroll(() => {
+        if (!term) return;
+        const buffer = term.buffer.active;
+        const isBottom = buffer.viewportY >= buffer.baseY;
+        setIsAtBottom(isBottom);
+      });
+
+      // Connect WebSocket
+      const wsProtocol = agentUrl.includes('localhost') ? 'ws' : 'wss';
+      const wsUrl = `${wsProtocol}://${agentUrl}/terminal?project=${encodeURIComponent(project)}&session=${encodeURIComponent(effectiveSessionName)}`;
+      ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      const currentTerm = term;
+      const currentWs = ws;
+
+      currentWs.onopen = () => {
+        if (cancelled) return;
+        setConnected(true);
+        currentTerm.write('\r\n\x1b[32mConnected to ' + agentUrl + '\x1b[0m\r\n\r\n');
+
+        currentWs.send(
           JSON.stringify({
             type: 'resize',
-            cols: term.cols,
-            rows: term.rows,
+            cols: currentTerm.cols,
+            rows: currentTerm.rows,
           })
         );
-      }
-    };
+      };
 
-    window.addEventListener('resize', handleResize);
+      currentWs.onmessage = (event) => {
+        if (cancelled) return;
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'pong') return;
+          if (msg.type === 'history') {
+            currentTerm.write(msg.data);
+            currentTerm.scrollToBottom();
+            return;
+          }
+        } catch {
+          currentTerm.write(event.data);
+        }
+      };
+
+      currentWs.onclose = () => {
+        if (cancelled) return;
+        setConnected(false);
+        currentTerm.write('\r\n\x1b[31mDisconnected\x1b[0m\r\n');
+      };
+
+      currentWs.onerror = (err) => {
+        if (cancelled) return;
+        console.error('WebSocket error:', err);
+        currentTerm.write('\r\n\x1b[31mConnection error\x1b[0m\r\n');
+      };
+
+      currentTerm.onData((data) => {
+        if (currentWs.readyState === WebSocket.OPEN) {
+          currentWs.send(JSON.stringify({ type: 'input', data }));
+        }
+      });
+
+      handleResize = () => {
+        fitAddon.fit();
+        if (currentWs.readyState === WebSocket.OPEN) {
+          currentWs.send(
+            JSON.stringify({
+              type: 'resize',
+              cols: currentTerm.cols,
+              rows: currentTerm.rows,
+            })
+          );
+        }
+      };
+
+      window.addEventListener('resize', handleResize);
+    }, 150); // 150ms debounce to let React Strict Mode cleanup complete
 
     // Cleanup
     return () => {
-      window.removeEventListener('resize', handleResize);
-      ws.close();
-      // Dispose WebGL addon first to avoid _isDisposed error
+      cancelled = true;
+      clearTimeout(connectTimeout);
+
+      if (handleResize) {
+        window.removeEventListener('resize', handleResize);
+      }
+      if (ws) {
+        ws.close();
+      }
       if (webglAddonRef.current) {
         try {
           webglAddonRef.current.dispose();
@@ -243,9 +281,11 @@ export function Terminal({ agentUrl, project, sessionName }: TerminalProps) {
         }
         webglAddonRef.current = null;
       }
-      term.dispose();
+      if (term) {
+        term.dispose();
+      }
     };
-  }, [agentUrl, project, sessionName]);
+  }, [agentUrl, project, effectiveSessionName]);
 
   // Search effect
   useEffect(() => {

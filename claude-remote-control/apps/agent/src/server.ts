@@ -24,14 +24,20 @@ const projectHookStatus = new Map<string, HookStatus>();
 // Track pending tool executions to detect permission waiting
 const pendingTools = new Map<string, { toolName: string; timestamp: number }>();
 
-// Generate human-readable session names
-function generateSessionName(): string {
+// Track pending auto-close timers
+const autoCloseTimers = new Map<string, NodeJS.Timeout>();
+
+// Auto-close delay in ms (5 seconds to allow viewing the final output)
+const AUTO_CLOSE_DELAY = 5000;
+
+// Generate human-readable session names with project prefix
+function generateSessionName(project: string): string {
   const adjectives = ['brave', 'swift', 'calm', 'bold', 'wise', 'keen', 'fair', 'wild', 'bright', 'cool'];
   const nouns = ['lion', 'hawk', 'wolf', 'bear', 'fox', 'owl', 'deer', 'lynx', 'eagle', 'tiger'];
   const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
   const noun = nouns[Math.floor(Math.random() * nouns.length)];
   const num = Math.floor(Math.random() * 100);
-  return `${adj}-${noun}-${num}`;
+  return `${project}--${adj}-${noun}-${num}`;
 }
 
 export function createServer() {
@@ -46,7 +52,8 @@ export function createServer() {
   wss.on('connection', async (ws, req) => {
     const url = new URL(req.url!, `http://${req.headers.host}`);
     const project = url.searchParams.get('project');
-    const sessionName = url.searchParams.get('session') || generateSessionName();
+    const urlSessionName = url.searchParams.get('session');
+    const sessionName = urlSessionName || generateSessionName(project || 'unknown');
 
     // Validate project whitelist
     if (!project || !config.projects.whitelist.includes(project)) {
@@ -174,6 +181,15 @@ export function createServer() {
     switch (event) {
       case 'SessionStart':
         status = 'running';
+        // Cancel any pending auto-close timer
+        if (tmux_session) {
+          const existingTimer = autoCloseTimers.get(tmux_session);
+          if (existingTimer) {
+            clearTimeout(existingTimer);
+            autoCloseTimers.delete(tmux_session);
+            console.log(`[Auto-close] Cancelled for '${tmux_session}' - new session started`);
+          }
+        }
         break;
       case 'PreToolUse':
         // Tool starting - still running (most tools are auto-approved)
@@ -208,6 +224,31 @@ export function createServer() {
         status = 'ended';
         if (trackingKey) {
           pendingTools.delete(trackingKey);
+        }
+        // Auto-close the tmux session after a delay
+        if (tmux_session) {
+          // Cancel any existing timer
+          const existingTimer = autoCloseTimers.get(tmux_session);
+          if (existingTimer) {
+            clearTimeout(existingTimer);
+          }
+          // Schedule auto-close
+          const timer = setTimeout(async () => {
+            try {
+              const { exec } = await import('child_process');
+              const { promisify } = await import('util');
+              const execAsync = promisify(exec);
+              await execAsync(`tmux kill-session -t "${tmux_session}" 2>/dev/null`);
+              console.log(`[Auto-close] Session '${tmux_session}' killed after Claude Code exit`);
+              autoCloseTimers.delete(tmux_session);
+              tmuxSessionStatus.delete(tmux_session);
+            } catch {
+              // Session may already be closed
+              autoCloseTimers.delete(tmux_session);
+            }
+          }, AUTO_CLOSE_DELAY);
+          autoCloseTimers.set(tmux_session, timer);
+          console.log(`[Auto-close] Session '${tmux_session}' scheduled to close in ${AUTO_CLOSE_DELAY / 1000}s`);
         }
         break;
     }
