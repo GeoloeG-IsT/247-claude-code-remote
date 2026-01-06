@@ -313,6 +313,63 @@ export async function createServer() {
         .catch((err) => {
           console.error(`[Terminal] Failed to capture initial history for '${sessionName}':`, err);
         });
+    } else {
+      // New session created - register in DB and broadcast to subscribers
+      const now = Date.now();
+      const sessionProject = project!;
+
+      // Store in database (may be undefined in test environments)
+      let createdAt = now;
+      try {
+        const dbSession = sessionsDb.upsertSession(sessionName, {
+          project: sessionProject,
+          status: 'init',
+          attentionReason: undefined,
+          lastEvent: 'SessionCreated',
+          lastActivity: now,
+          lastStatusChange: now,
+          environmentId: environmentId || undefined,
+        });
+        if (dbSession?.created_at) {
+          createdAt = dbSession.created_at;
+        }
+      } catch (err) {
+        console.error(`[Session] Failed to persist session '${sessionName}':`, err);
+      }
+
+      // Update in-memory map
+      tmuxSessionStatus.set(sessionName, {
+        status: 'init',
+        lastEvent: 'SessionCreated',
+        lastActivity: now,
+        lastStatusChange: now,
+        project: sessionProject,
+      });
+
+      // Get environment info for the broadcast
+      const envMeta = environmentId ? getEnvironmentMetadata(environmentId) : undefined;
+
+      // Broadcast new session to all subscribers
+      broadcastStatusUpdate({
+        name: sessionName,
+        project: sessionProject,
+        status: 'init',
+        statusSource: 'hook',
+        lastEvent: 'SessionCreated',
+        lastStatusChange: now,
+        createdAt,
+        lastActivity: undefined,
+        environmentId: environmentId || undefined,
+        environment: envMeta ? {
+          id: envMeta.id,
+          name: envMeta.name,
+          provider: envMeta.provider,
+          icon: envMeta.icon,
+          isDefault: envMeta.isDefault,
+        } : undefined,
+      });
+
+      console.log(`[Session] New session '${sessionName}' created and broadcast to ${statusSubscribers.size} subscribers`);
     }
 
     // Forward terminal output to WebSocket - store handler for cleanup
