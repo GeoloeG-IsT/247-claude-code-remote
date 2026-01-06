@@ -2,7 +2,6 @@
 export interface Machine {
   id: string;
   name: string;
-  tunnelUrl: string;
   status: 'online' | 'offline';
   lastSeen: Date | null;
   config: MachineConfig | null;
@@ -11,10 +10,7 @@ export interface Machine {
 
 export interface MachineConfig {
   projects: string[];
-  github?: {
-    enabled: boolean;
-    allowedOrgs: string[];
-  };
+  agentUrl?: string; // e.g., "localhost:4678" or "mac.tailnet.ts.net:4678"
 }
 
 // Session types
@@ -54,7 +50,6 @@ export type WSMessageFromAgent =
 export interface RegisterMachineRequest {
   id: string;
   name: string;
-  tunnelUrl: string;
   config?: MachineConfig;
 }
 
@@ -73,17 +68,13 @@ export interface AgentConfig {
     id: string;
     name: string;
   };
-  tunnel: {
-    domain: string;
+  agent?: {
+    port: number;
+    url: string; // e.g., "localhost:4678" or "mac.tailnet.ts.net:4678"
   };
   projects: {
     basePath: string;
     whitelist: string[];
-  };
-  github?: {
-    enabled: boolean;
-    clonePath: string;
-    allowedOrgs: string[];
   };
   dashboard: {
     apiUrl: string;

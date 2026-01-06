@@ -3,12 +3,12 @@ import { pgTable, text, timestamp, jsonb } from 'drizzle-orm/pg-core';
 export const machines = pgTable('machines', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
-  tunnelUrl: text('tunnel_url').notNull(),
+  tunnelUrl: text('tunnel_url'), // Optional - not used in v0
   status: text('status').default('offline').notNull(),
   lastSeen: timestamp('last_seen', { withTimezone: true }),
   config: jsonb('config').$type<{
     projects: string[];
-    github?: { enabled: boolean; allowedOrgs: string[] };
+    agentUrl?: string; // e.g., "localhost:4678" or "mac.tailnet.ts.net:4678"
   }>(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });

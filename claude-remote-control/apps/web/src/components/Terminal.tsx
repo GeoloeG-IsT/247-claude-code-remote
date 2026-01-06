@@ -7,12 +7,12 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
 
 interface TerminalProps {
-  machineUrl: string;
+  agentUrl: string;
   project: string;
   sessionName?: string;
 }
 
-export function Terminal({ machineUrl, project, sessionName }: TerminalProps) {
+export function Terminal({ agentUrl, project, sessionName }: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const [connected, setConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
@@ -46,13 +46,15 @@ export function Terminal({ machineUrl, project, sessionName }: TerminalProps) {
     fitAddonRef.current = fitAddon;
 
     // Connect WebSocket to agent
-    const wsUrl = `wss://${machineUrl}/terminal?project=${encodeURIComponent(project)}&session=${encodeURIComponent(sessionName || '')}`;
+    // Use ws:// for localhost, wss:// for remote
+    const wsProtocol = agentUrl.includes('localhost') ? 'ws' : 'wss';
+    const wsUrl = `${wsProtocol}://${agentUrl}/terminal?project=${encodeURIComponent(project)}&session=${encodeURIComponent(sessionName || '')}`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
       setConnected(true);
-      term.write('\r\n\x1b[32mConnected to ' + machineUrl + '\x1b[0m\r\n\r\n');
+      term.write('\r\n\x1b[32mConnected to ' + agentUrl + '\x1b[0m\r\n\r\n');
 
       // Send initial size
       ws.send(
@@ -114,7 +116,7 @@ export function Terminal({ machineUrl, project, sessionName }: TerminalProps) {
       ws.close();
       term.dispose();
     };
-  }, [machineUrl, project, sessionName]);
+  }, [agentUrl, project, sessionName]);
 
   const startClaude = () => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {

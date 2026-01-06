@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { id, name, tunnelUrl, config } = body;
+  const { id, name, config } = body;
 
   // Upsert machine
   const existing = await db.select().from(machines).where(eq(machines.id, id));
@@ -22,7 +22,6 @@ export async function POST(request: Request) {
       .update(machines)
       .set({
         name,
-        tunnelUrl,
         status: 'online',
         lastSeen: new Date(),
         config,
@@ -32,7 +31,6 @@ export async function POST(request: Request) {
     await db.insert(machines).values({
       id,
       name,
-      tunnelUrl,
       status: 'online',
       lastSeen: new Date(),
       config,

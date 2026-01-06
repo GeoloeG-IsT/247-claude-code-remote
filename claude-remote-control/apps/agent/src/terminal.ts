@@ -6,11 +6,20 @@ export interface Terminal {
   onData(callback: (data: string) => void): void;
   onExit(callback: (info: { exitCode: number }) => void): void;
   kill(): void;
+  detach(): void;
 }
 
 export function createTerminal(cwd: string, sessionName: string): Terminal {
-  // Use prebuilt node-pty for better compatibility
-  const shell = pty.spawn('/bin/zsh', [], {
+  // Use tmux for session persistence
+  // -A = attach if session exists, create if not
+  // -s = session name
+  // -c = working directory
+  const shell = pty.spawn('tmux', [
+    'new-session',
+    '-A',
+    '-s', sessionName,
+    '-c', cwd,
+  ], {
     name: 'xterm-256color',
     cols: 120,
     rows: 30,
@@ -28,5 +37,9 @@ export function createTerminal(cwd: string, sessionName: string): Terminal {
     onData: (callback) => shell.onData(callback),
     onExit: (callback) => shell.onExit(callback),
     kill: () => shell.kill(),
+    detach: () => {
+      // Send tmux detach command (Ctrl+B, d)
+      shell.write('\x02d');
+    },
   };
 }

@@ -90,8 +90,9 @@ export function createServer() {
     });
 
     ws.on('close', () => {
-      console.log('Client disconnected, tmux session preserved');
-      // Don't kill terminal - tmux keeps session alive
+      console.log(`Client disconnected, tmux session '${sessionName}' preserved`);
+      // Detach from tmux instead of killing - session stays alive
+      terminal.detach();
     });
 
     ws.on('error', (err) => {
@@ -100,18 +101,11 @@ export function createServer() {
   });
 
   // REST API endpoints
-  app.get('/api/info', (req, res) => {
-    res.json({
-      machine: config.machine,
-      status: 'online',
-    });
-  });
-
-  app.get('/api/projects', (req, res) => {
+  app.get('/api/projects', (_req, res) => {
     res.json(config.projects.whitelist);
   });
 
-  app.get('/api/sessions', async (req, res) => {
+  app.get('/api/sessions', async (_req, res) => {
     const { exec } = await import('child_process');
     const { promisify } = await import('util');
     const execAsync = promisify(exec);
@@ -124,13 +118,6 @@ export function createServer() {
     } catch {
       res.json([]);
     }
-  });
-
-  // Hook endpoint for Claude Code plugin
-  app.post('/api/hooks/stop', (req, res) => {
-    console.log('Claude stopped:', req.body);
-    // Could send push notification here
-    res.json({ received: true });
   });
 
   return server;

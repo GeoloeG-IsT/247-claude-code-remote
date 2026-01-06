@@ -3,8 +3,9 @@
     "id": "mac-mini-home",
     "name": "Mac Mini (home)"
   },
-  "tunnel": {
-    "domain": "mac.thevibecompany.co"
+  "agent": {
+    "port": 4678,
+    "url": "localhost:4678"
   },
   "projects": {
     "basePath": "~/Dev/BrainStorming",
@@ -14,11 +15,6 @@
       "enterprise",
       "quivrcom"
     ]
-  },
-  "github": {
-    "enabled": true,
-    "clonePath": "~/Dev",
-    "allowedOrgs": ["*"]
   },
   "dashboard": {
     "apiUrl": "http://localhost:3001/api",

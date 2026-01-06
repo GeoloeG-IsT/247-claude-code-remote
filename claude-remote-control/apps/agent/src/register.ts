@@ -11,10 +11,9 @@ export async function registerWithDashboard(): Promise<void> {
       body: JSON.stringify({
         id: config.machine.id,
         name: config.machine.name,
-        tunnelUrl: config.tunnel.domain,
         config: {
           projects: config.projects.whitelist,
-          github: config.github,
+          agentUrl: config.agent?.url || 'localhost:4678',
         },
       }),
     });
@@ -30,6 +29,6 @@ export async function registerWithDashboard(): Promise<void> {
 }
 
 export function startHeartbeat(): void {
-  // Send heartbeat every 30 seconds
-  setInterval(registerWithDashboard, 30000);
+  // Send heartbeat every 5 minutes (reduced from 30 seconds)
+  setInterval(registerWithDashboard, 5 * 60 * 1000);
 }
