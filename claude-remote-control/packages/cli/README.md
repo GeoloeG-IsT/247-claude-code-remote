@@ -7,7 +7,7 @@ A CLI tool by [The Vibe Company](https://247.thevibecompany.co) that lets you ru
 ## Installation
 
 ```bash
-npm install -g @vibecompany/247
+npm install -g @vibecompany/247-cli
 ```
 
 ### Prerequisites

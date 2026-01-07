@@ -47,7 +47,7 @@ jobs:
 
       - name: Build CLI
         working-directory: claude-remote-control
-        run: pnpm --filter @vibecompany/247 build
+        run: pnpm --filter @vibecompany/247-cli build
 
       - name: Configure Git
         run: |
