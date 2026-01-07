@@ -1,4 +1,5 @@
-import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, unlinkSync } from 'fs';
+import { join } from 'path';
 import { randomUUID } from 'crypto';
 import { getAgentPaths, ensureDirectories } from './paths.js';
 
@@ -41,17 +42,92 @@ const DEFAULT_CONFIG: AgentConfig = {
 };
 
 /**
- * Load configuration from ~/.247/config.json
+ * Get the profiles directory path
  */
-export function loadConfig(): AgentConfig | null {
+export function getProfilesDir(): string {
+  const paths = getAgentPaths();
+  return join(paths.configDir, 'profiles');
+}
+
+/**
+ * Get the config file path for a specific profile
+ * @param profileName - Profile name, or undefined/null/'default' for default config
+ */
+export function getProfilePath(profileName?: string | null): string {
   const paths = getAgentPaths();
 
-  if (!existsSync(paths.configPath)) {
+  if (!profileName || profileName === 'default') {
+    return paths.configPath;
+  }
+
+  return join(getProfilesDir(), `${profileName}.json`);
+}
+
+/**
+ * List all available profiles
+ */
+export function listProfiles(): string[] {
+  const paths = getAgentPaths();
+  const profilesDir = getProfilesDir();
+
+  const profiles: string[] = [];
+
+  // Add default profile if it exists
+  if (existsSync(paths.configPath)) {
+    profiles.push('default');
+  }
+
+  // Add named profiles
+  if (existsSync(profilesDir)) {
+    const files = readdirSync(profilesDir);
+    for (const file of files) {
+      if (file.endsWith('.json')) {
+        profiles.push(file.replace('.json', ''));
+      }
+    }
+  }
+
+  return profiles;
+}
+
+/**
+ * Check if a profile exists
+ */
+export function profileExists(profileName?: string | null): boolean {
+  const configPath = getProfilePath(profileName);
+  return existsSync(configPath);
+}
+
+/**
+ * Delete a profile
+ */
+export function deleteProfile(profileName: string): boolean {
+  if (!profileName || profileName === 'default') {
+    throw new Error('Cannot delete default profile');
+  }
+
+  const configPath = getProfilePath(profileName);
+  if (!existsSync(configPath)) {
+    return false;
+  }
+
+  unlinkSync(configPath);
+  return true;
+}
+
+/**
+ * Load configuration from ~/.247/config.json or a profile
+ * @param profileName - Profile name to load, or undefined for default
+ */
+export function loadConfig(profileName?: string | null): AgentConfig | null {
+  const configPath = getProfilePath(profileName);
+
+  if (!existsSync(configPath)) {
     return null;
   }
 
   try {
-    const content = readFileSync(paths.configPath, 'utf-8');
+    const content = readFileSync(configPath, 'utf-8');
     const config = JSON.parse(content) as AgentConfig;
 
     // Apply environment overrides
@@ -70,14 +146,24 @@ export function loadConfig(): AgentConfig | null {
 }
 
 /**
- * Save configuration to ~/.247/config.json
+ * Save configuration to ~/.247/config.json or a profile
+ * @param config - Configuration to save
+ * @param profileName - Profile name to save to, or undefined for default
  */
-export function saveConfig(config: AgentConfig): void {
-  const paths = getAgentPaths();
+export function saveConfig(config: AgentConfig, profileName?: string | null): void {
+  const configPath = getProfilePath(profileName);
   ensureDirectories();
 
+  // Ensure profiles directory exists for named profiles
+  if (profileName && profileName !== 'default') {
+    const profilesDir = getProfilesDir();
+    if (!existsSync(profilesDir)) {
+      mkdirSync(profilesDir, { recursive: true });
+    }
+  }
+
   const content = JSON.stringify(config, null, 2);
-  writeFileSync(paths.configPath, content, 'utf-8');
+  writeFileSync(configPath, content, 'utf-8');
 }
 
 /**
@@ -106,10 +192,11 @@ export function createConfig(options: {
 
 /**
  * Check if configuration exists
+ * @param profileName - Profile name to check, or undefined for default
  */
-export function configExists(): boolean {
-  const paths = getAgentPaths();
-  return existsSync(paths.configPath);
+export function configExists(profileName?: string | null): boolean {
+  const configPath = getProfilePath(profileName);
+  return existsSync(configPath);
 }
 
 /**

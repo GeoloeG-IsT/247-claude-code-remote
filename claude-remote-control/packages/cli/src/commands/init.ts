@@ -4,7 +4,7 @@ import ora from 'ora';
 import enquirer from 'enquirer';
 import { hostname } from 'os';
 import { checkAllPrerequisites, allRequiredMet } from '../lib/prerequisites.js';
-import { createConfig, saveConfig, configExists, loadConfig } from '../lib/config.js';
+import { createConfig, saveConfig, configExists, loadConfig, getProfilePath } from '../lib/config.js';
 import { getAgentPaths, ensureDirectories } from '../lib/paths.js';
 import { installHooks } from '../hooks/installer.js';
 
@@ -14,7 +14,13 @@ export const initCommand = new Command('init')
   .option('-p, --port <port>', 'Agent port', '4678')
   .option('--projects <path>', 'Projects base path', '~/Dev')
   .option('-f, --force', 'Overwrite existing configuration')
-  .action(async (options) => {
+  .option('-P, --profile <name>', 'Create or update a named profile')
+  .action(async (options, cmd) => {
+    // Get profile from command option or parent (global) option
+    const profileName = options.profile || cmd.parent?.opts().profile;
+    const isProfileInit = !!profileName;
+    const profileLabel = profileName ? ` (profile: ${profileName})` : '';
+
     console.log(`
   ╭──────────────────────────────────╮
   │  247 - The Vibe Company          │
@@ -23,9 +29,9 @@ export const initCommand = new Command('init')
 `);
 
     // Check if config already exists
-    if (configExists() && !options.force) {
-      const existing = loadConfig();
-      console.log(chalk.yellow('Configuration already exists:'));
+    if (configExists(profileName) && !options.force) {
+      const existing = loadConfig(profileName);
+      console.log(chalk.yellow(`Configuration${profileLabel} already exists:`));
       console.log(`  Machine: ${existing?.machine.name}`);
       console.log(`  Port: ${existing?.agent.port}`);
       console.log(`  Projects: ${existing?.projects.basePath}`);
@@ -78,7 +84,7 @@ export const initCommand = new Command('init')
     }
 
     // Create and save configuration
-    const configSpinner = ora('Creating configuration...').start();
+    const configSpinner = ora(`Creating configuration${profileLabel}...`).start();
     try {
       ensureDirectories();
       const config = createConfig({
@@ -86,11 +92,11 @@ export const initCommand = new Command('init')
         port,
         projectsPath,
       });
-      saveConfig(config);
-      configSpinner.succeed('Configuration saved');
+      saveConfig(config, profileName);
+      configSpinner.succeed(`Configuration${profileLabel} saved`);
 
-      const paths = getAgentPaths();
-      console.log(chalk.dim(`  → ${paths.configPath}`));
+      const configPath = getProfilePath(profileName);
+      console.log(chalk.dim(`  → ${configPath}`));
     } catch (err) {
       configSpinner.fail(`Failed to create configuration: ${(err as Error).message}`);
       process.exit(1);
@@ -115,10 +121,15 @@ export const initCommand = new Command('init')
     }
 
     // Success message
-    console.log(chalk.green('\n✓ Setup complete!\n'));
+    console.log(chalk.green(`\n✓ Setup${profileLabel} complete!\n`));
 
     console.log('Next steps:');
-    console.log(chalk.cyan('  247 start                   ') + chalk.dim('# Start the agent'));
-    console.log(chalk.cyan('  247 service install --start ') + chalk.dim('# Install as system service'));
+    if (profileName) {
+      console.log(chalk.cyan(`  247 start --profile ${profileName}`) + chalk.dim('   # Start the agent with this profile'));
+      console.log(chalk.cyan(`  247 profile show ${profileName}`) + chalk.dim('     # View profile configuration'));
+    } else {
+      console.log(chalk.cyan('  247 start                   ') + chalk.dim('# Start the agent'));
+      console.log(chalk.cyan('  247 service install --start ') + chalk.dim('# Install as system service'));
+    }
     console.log();
   });

@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync, unlinkSync, openSync } from 'f
 import { spawn } from 'child_process';
 import { join } from 'path';
 import { getAgentPaths, ensureDirectories } from './paths.js';
-import { loadConfig } from './config.js';
+import { loadConfig, getProfilePath } from './config.js';
 
 /**
  * Check if the agent process is running
@@ -42,12 +42,17 @@ export function isAgentRunning(): { running: boolean; pid?: number } {
 
 /**
  * Start the agent as a background daemon
+ * @param profileName - Optional profile name to use
  */
-export async function startAgentDaemon(): Promise<{ success: boolean; pid?: number; error?: string }> {
+export async function startAgentDaemon(profileName?: string | null): Promise<{ success: boolean; pid?: number; error?: string }> {
   const paths = getAgentPaths();
-  const config = loadConfig();
+  const configPath = getProfilePath(profileName);
+  const config = loadConfig(profileName);
 
   if (!config) {
+    if (profileName) {
+      return { success: false, error: `Profile '${profileName}' not found. Run: 247 profile create ${profileName}` };
+    }
     return { success: false, error: 'Configuration not found. Run: 247 init' };
   }
 
@@ -96,8 +101,9 @@ export async function startAgentDaemon(): Promise<{ success: boolean; pid?: numb
     stdio: ['ignore', stdout, stderr],
     env: {
       ...process.env,
-      AGENT_247_CONFIG: paths.configPath,
+      AGENT_247_CONFIG: configPath,
       AGENT_247_DATA: paths.dataDir,
+      AGENT_247_PROFILE: profileName || '',
     },
   });
 

@@ -10,13 +10,15 @@ import { serviceCommand } from './commands/service.js';
 import { hooksCommand } from './commands/hooks.js';
 import { updateCommand } from './commands/update.js';
 import { doctorCommand } from './commands/doctor.js';
+import { profileCommand } from './commands/profile.js';
 
 const program = new Command();
 
 program
   .name('247')
   .description('247 - Access Claude Code from anywhere 24/7\nby The Vibe Company')
-  .version('0.1.0');
+  .version('0.1.0')
+  .option('-P, --profile <name>', 'Use a specific profile (dev, prod, etc.)');
 
 // Add commands
 program.addCommand(initCommand);
@@ -28,6 +30,10 @@ program.addCommand(serviceCommand);
 program.addCommand(hooksCommand);
 program.addCommand(updateCommand);
 program.addCommand(doctorCommand);
+program.addCommand(profileCommand);
+
+// Export program for use in subcommands (to access global options)
+export { program };
 
 // Default action (no command)
 program.action(() => {

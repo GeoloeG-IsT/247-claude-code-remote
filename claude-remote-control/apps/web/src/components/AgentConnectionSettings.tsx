@@ -90,6 +90,7 @@ export function AgentConnectionSettings({
 }: AgentConnectionSettingsProps) {
   const [selectedMethod, setSelectedMethod] = useState<string>('localhost');
   const [customUrl, setCustomUrl] = useState('');
+  const [localhostPort, setLocalhostPort] = useState('4678');
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
   const [saved, setSaved] = useState(false);
@@ -99,14 +100,18 @@ export function AgentConnectionSettings({
     const existing = loadAgentConnection();
     if (existing) {
       setSelectedMethod(existing.method);
-      if (existing.method !== 'localhost') {
+      if (existing.method === 'localhost') {
+        // Extract port from URL (e.g., "localhost:4679" -> "4679")
+        const port = existing.url.split(':')[1] || '4678';
+        setLocalhostPort(port);
+      } else {
         setCustomUrl(existing.url);
       }
     }
   }, []);
 
   const currentPreset = PRESETS.find((p) => p.id === selectedMethod);
-  const displayUrl = selectedMethod === 'localhost' ? 'localhost:4678' : customUrl;
+  const displayUrl = selectedMethod === 'localhost' ? `localhost:${localhostPort}` : customUrl;
 
   const handleTest = async () => {
     if (!displayUrl) return;
@@ -334,14 +339,97 @@ export function AgentConnectionSettings({
                   </motion.div>
                 )}
 
-                {/* Current URL Display */}
-                {displayUrl && selectedMethod === 'localhost' && (
-                  <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                    <div className="flex items-center gap-2 text-sm text-emerald-400">
-                      <Server className="w-4 h-4" />
-                      <span className="font-mono">{displayUrl}</span>
+                {/* Localhost Port Input */}
+                {selectedMethod === 'localhost' && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-3"
+                  >
+                    <label className="text-sm font-medium text-white/70">Port</label>
+                    <div className="flex gap-2 items-center">
+                      <span className="text-white/50 font-mono text-sm">localhost:</span>
+                      <input
+                        type="text"
+                        value={localhostPort}
+                        onChange={(e) => setLocalhostPort(e.target.value.replace(/\D/g, ''))}
+                        placeholder="4678"
+                        className={cn(
+                          'w-24 px-3 py-2 rounded-xl',
+                          'bg-white/5 border border-white/10',
+                          'text-white placeholder:text-white/30',
+                          'focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20',
+                          'font-mono text-sm'
+                        )}
+                      />
+                      <button
+                        onClick={handleTest}
+                        disabled={testing || !localhostPort}
+                        className={cn(
+                          'px-4 py-2 rounded-xl font-medium text-sm transition-all',
+                          testing
+                            ? 'bg-white/5 text-white/30 cursor-wait'
+                            : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'
+                        )}
+                      >
+                        {testing ? 'Testing...' : 'Test'}
+                      </button>
                     </div>
-                  </div>
+
+                    {/* Quick port buttons */}
+                    <div className="flex gap-2 items-center">
+                      <span className="text-xs text-white/40">Quick select:</span>
+                      {['4678', '4679', '4680'].map((port) => (
+                        <button
+                          key={port}
+                          onClick={() => setLocalhostPort(port)}
+                          className={cn(
+                            'px-2 py-1 rounded-lg text-xs font-mono transition-all',
+                            localhostPort === port
+                              ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                              : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60 border border-white/10'
+                          )}
+                        >
+                          {port}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Test Result */}
+                    {testResult && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={cn(
+                          'flex items-center gap-2 px-3 py-2 rounded-lg text-sm',
+                          testResult === 'success'
+                            ? 'bg-emerald-500/20 text-emerald-400'
+                            : 'bg-red-500/20 text-red-400'
+                        )}
+                      >
+                        {testResult === 'success' ? (
+                          <>
+                            <Check className="w-4 h-4" />
+                            <span>Connection successful!</span>
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle className="w-4 h-4" />
+                            <span>Could not connect to agent</span>
+                          </>
+                        )}
+                      </motion.div>
+                    )}
+
+                    {/* Current URL Display */}
+                    <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                      <div className="flex items-center gap-2 text-sm text-emerald-400">
+                        <Server className="w-4 h-4" />
+                        <span className="font-mono">{displayUrl}</span>
+                      </div>
+                    </div>
+                  </motion.div>
                 )}
               </div>
 
