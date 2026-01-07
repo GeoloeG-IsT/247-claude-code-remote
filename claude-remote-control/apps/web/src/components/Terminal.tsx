@@ -165,6 +165,8 @@ export function Terminal({
     let ws: WebSocket | null = null;
     let handleResize: (() => void) | null = null;
     let handleMouseUp: (() => void) | null = null;
+    let handlePaste: ((e: ClipboardEvent) => void) | null = null;
+    let termElement: HTMLElement | null = null;
 
     // Debounce connection to avoid React Strict Mode double-mount issues
     const connectTimeout = setTimeout(() => {
@@ -240,20 +242,7 @@ export function Terminal({
           }
           return false; // Prevent terminal from receiving Ctrl+C
         }
-        // Cmd+V (Mac) or Ctrl+V (Windows/Linux) = paste (only on keydown to avoid double events)
-        if ((event.metaKey || event.ctrlKey) && event.key === 'v' && event.type === 'keydown') {
-          isPastingRef.current = true;
-          navigator.clipboard.readText().then((text) => {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ type: 'input', data: text }));
-            }
-            // Clear flag after a short delay to catch any duplicate onData events
-            setTimeout(() => {
-              isPastingRef.current = false;
-            }, 50);
-          });
-          return false; // Prevent default paste behavior
-        }
+        // Let Cmd+V / Ctrl+V pass through - handled by paste event listener below
         return true; // Let other keys pass through
       });
 
@@ -279,6 +268,35 @@ export function Terminal({
       };
       term.element?.addEventListener('mousedown', handleMouseDown);
       window.addEventListener('mouseup', handleMouseUp);
+
+      // Handle paste events - detect image vs text
+      handlePaste = (e: ClipboardEvent) => {
+        const clipboardData = e.clipboardData;
+        if (!clipboardData) return;
+
+        // Check if clipboard contains an image
+        const hasImage = Array.from(clipboardData.items).some((item) =>
+          item.type.startsWith('image/')
+        );
+
+        if (hasImage) {
+          // Let default behavior handle images (Claude Code can process them)
+          return;
+        }
+
+        // Text paste - send via WebSocket and prevent default
+        const text = clipboardData.getData('text');
+        if (text && ws && ws.readyState === WebSocket.OPEN) {
+          e.preventDefault();
+          isPastingRef.current = true;
+          ws.send(JSON.stringify({ type: 'input', data: text }));
+          setTimeout(() => {
+            isPastingRef.current = false;
+          }, 50);
+        }
+      };
+      termElement = term.element ?? null;
+      termElement?.addEventListener('paste', handlePaste);
 
       // Track scroll position (skip during selection to prevent re-render breaking selection)
       term.onScroll(() => {
@@ -407,6 +425,9 @@ export function Terminal({
       }
       if (handleMouseUp) {
         window.removeEventListener('mouseup', handleMouseUp);
+      }
+      if (handlePaste && termElement) {
+        termElement.removeEventListener('paste', handlePaste);
       }
 
       // Close WebSocket properly

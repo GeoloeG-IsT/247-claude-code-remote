@@ -3,25 +3,39 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 /**
  * Test paste handling logic in Terminal component.
  *
- * The bug: When pasting with Cmd+V, text was sometimes pasted twice because:
- * 1. Custom key handler sends clipboard text via WebSocket
- * 2. xterm.js onData also fires with the same text
- *
- * The fix: Use isPastingRef flag to prevent onData from sending during paste.
+ * The Terminal uses a paste event listener that:
+ * 1. Detects if clipboard contains an image - if so, lets default behavior handle it
+ * 2. For text-only paste, sends via WebSocket and prevents default
+ * 3. Uses isPastingRef flag to prevent onData from double-sending during paste
  */
 
-// Helper to create keyboard events
-const createKeyboardEvent = (
-  key: string,
-  type: 'keydown' | 'keyup',
-  modifiers: { metaKey?: boolean; ctrlKey?: boolean } = {}
-): KeyboardEvent => {
-  return new KeyboardEvent(type, {
-    key,
-    metaKey: modifiers.metaKey ?? false,
-    ctrlKey: modifiers.ctrlKey ?? false,
-    bubbles: true,
+// Helper to create a mock ClipboardEvent
+const createPasteEvent = (
+  items: Array<{ type: string; data?: string }>,
+  textData?: string
+): ClipboardEvent => {
+  const dataTransferItems = items.map((item) => ({
+    type: item.type,
+    kind: item.type.startsWith('image/') ? 'file' : 'string',
+    getAsString: vi.fn(),
+    getAsFile: vi.fn(),
+  }));
+
+  const clipboardData = {
+    items: dataTransferItems,
+    getData: vi.fn((type: string) => (type === 'text' ? (textData ?? '') : '')),
+    setData: vi.fn(),
+    clearData: vi.fn(),
+    types: items.map((i) => i.type),
+  };
+
+  const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
+  Object.defineProperty(event, 'clipboardData', {
+    value: clipboardData,
+    writable: false,
   });
+
+  return event;
 };
 
 // Extract the paste handling logic for testing
@@ -37,27 +51,34 @@ interface MockWebSocket {
 const WEBSOCKET_OPEN = 1;
 
 /**
- * Simulates the custom key event handler logic from Terminal.tsx
- * Returns true if the event was handled (should return false to prevent default)
+ * Simulates the paste event handler logic from Terminal.tsx
+ * Returns true if the event was handled (preventDefault called)
  */
-const handleCustomKeyEvent = (
-  event: KeyboardEvent,
+const handlePasteEvent = (
+  event: ClipboardEvent,
   state: PasteHandlerState,
-  ws: MockWebSocket | null,
-  clipboardText: string
+  ws: MockWebSocket | null
 ): boolean => {
-  // Cmd+V (Mac) or Ctrl+V (Windows/Linux) = paste (only on keydown)
-  if ((event.metaKey || event.ctrlKey) && event.key === 'v' && event.type === 'keydown') {
+  const clipboardData = event.clipboardData;
+  if (!clipboardData) return false;
+
+  // Check if clipboard contains an image
+  const hasImage = Array.from(clipboardData.items).some((item) => item.type.startsWith('image/'));
+
+  if (hasImage) {
+    // Let default behavior handle images (Claude Code can process them)
+    return false;
+  }
+
+  // Text paste - send via WebSocket and prevent default
+  const text = clipboardData.getData('text');
+  if (text && ws && ws.readyState === WEBSOCKET_OPEN) {
     state.isPasting = true;
-
-    // Simulate async clipboard read completing immediately for test
-    if (ws && ws.readyState === WEBSOCKET_OPEN) {
-      ws.send(JSON.stringify({ type: 'input', data: clipboardText }));
-    }
-
+    ws.send(JSON.stringify({ type: 'input', data: text }));
     return true; // Event was handled
   }
-  return false; // Event was not handled
+
+  return false;
 };
 
 /**
@@ -89,59 +110,83 @@ describe('Terminal paste handling', () => {
     vi.useRealTimers();
   });
 
-  describe('Cmd+V paste handling', () => {
-    it('should send clipboard data only once on Cmd+V keydown', () => {
-      const clipboardText = 'pasted text';
+  describe('Text paste handling', () => {
+    it('should send text via WebSocket on paste', () => {
+      const pasteEvent = createPasteEvent([{ type: 'text/plain' }], 'pasted text');
 
-      // Simulate Cmd+V keydown
-      const keydownEvent = createKeyboardEvent('v', 'keydown', { metaKey: true });
-      const handled = handleCustomKeyEvent(keydownEvent, state, mockWs, clipboardText);
+      const handled = handlePasteEvent(pasteEvent, state, mockWs);
 
       expect(handled).toBe(true);
       expect(state.isPasting).toBe(true);
       expect(mockWs.send).toHaveBeenCalledTimes(1);
       expect(mockWs.send).toHaveBeenCalledWith(
-        JSON.stringify({ type: 'input', data: clipboardText })
+        JSON.stringify({ type: 'input', data: 'pasted text' })
       );
     });
 
-    it('should ignore Cmd+V keyup event', () => {
-      const clipboardText = 'pasted text';
+    it('should not handle empty text paste', () => {
+      const pasteEvent = createPasteEvent([{ type: 'text/plain' }], '');
 
-      // Simulate Cmd+V keyup (should be ignored)
-      const keyupEvent = createKeyboardEvent('v', 'keyup', { metaKey: true });
-      const handled = handleCustomKeyEvent(keyupEvent, state, mockWs, clipboardText);
+      const handled = handlePasteEvent(pasteEvent, state, mockWs);
 
       expect(handled).toBe(false);
       expect(state.isPasting).toBe(false);
       expect(mockWs.send).not.toHaveBeenCalled();
     });
+  });
 
-    it('should work with Ctrl+V (Windows/Linux)', () => {
-      const clipboardText = 'pasted text';
+  describe('Image paste handling', () => {
+    it('should let default behavior handle image paste', () => {
+      const pasteEvent = createPasteEvent([{ type: 'image/png' }]);
 
-      // Simulate Ctrl+V keydown
-      const keydownEvent = createKeyboardEvent('v', 'keydown', { ctrlKey: true });
-      const handled = handleCustomKeyEvent(keydownEvent, state, mockWs, clipboardText);
+      const handled = handlePasteEvent(pasteEvent, state, mockWs);
 
-      expect(handled).toBe(true);
-      expect(state.isPasting).toBe(true);
-      expect(mockWs.send).toHaveBeenCalledTimes(1);
+      expect(handled).toBe(false); // Should not prevent default
+      expect(state.isPasting).toBe(false);
+      expect(mockWs.send).not.toHaveBeenCalled();
+    });
+
+    it('should let default behavior handle mixed text+image paste', () => {
+      // When both text and image are present, let default handle it
+      // (image takes precedence)
+      const pasteEvent = createPasteEvent(
+        [{ type: 'text/plain' }, { type: 'image/png' }],
+        'some text'
+      );
+
+      const handled = handlePasteEvent(pasteEvent, state, mockWs);
+
+      expect(handled).toBe(false); // Should not prevent default
+      expect(state.isPasting).toBe(false);
+      expect(mockWs.send).not.toHaveBeenCalled();
+    });
+
+    it('should handle various image types', () => {
+      const imageTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+
+      for (const imageType of imageTypes) {
+        state = { isPasting: false };
+        const pasteEvent = createPasteEvent([{ type: imageType }]);
+
+        const handled = handlePasteEvent(pasteEvent, state, mockWs);
+
+        expect(handled).toBe(false);
+      }
     });
   });
 
   describe('onData handler during paste', () => {
     it('should skip onData events while isPasting is true', () => {
-      const clipboardText = 'pasted text';
+      const pasteText = 'pasted text';
 
       // First, trigger paste (sets isPasting = true)
-      const keydownEvent = createKeyboardEvent('v', 'keydown', { metaKey: true });
-      handleCustomKeyEvent(keydownEvent, state, mockWs, clipboardText);
+      const pasteEvent = createPasteEvent([{ type: 'text/plain' }], pasteText);
+      handlePasteEvent(pasteEvent, state, mockWs);
 
       expect(mockWs.send).toHaveBeenCalledTimes(1);
 
       // Now simulate xterm.js firing onData with the same text
-      handleOnData(clipboardText, state, mockWs);
+      handleOnData(pasteText, state, mockWs);
 
       // Should NOT send again because isPasting is true
       expect(mockWs.send).toHaveBeenCalledTimes(1);
@@ -158,16 +203,16 @@ describe('Terminal paste handling', () => {
     });
 
     it('should allow onData events after paste flag is cleared', () => {
-      const clipboardText = 'pasted text';
+      const pasteText = 'pasted text';
 
       // Trigger paste
-      const keydownEvent = createKeyboardEvent('v', 'keydown', { metaKey: true });
-      handleCustomKeyEvent(keydownEvent, state, mockWs, clipboardText);
+      const pasteEvent = createPasteEvent([{ type: 'text/plain' }], pasteText);
+      handlePasteEvent(pasteEvent, state, mockWs);
 
       expect(mockWs.send).toHaveBeenCalledTimes(1);
 
       // Simulate onData during paste (should be blocked)
-      handleOnData(clipboardText, state, mockWs);
+      handleOnData(pasteText, state, mockWs);
       expect(mockWs.send).toHaveBeenCalledTimes(1);
 
       // Clear the paste flag (simulates setTimeout callback)
@@ -180,28 +225,26 @@ describe('Terminal paste handling', () => {
   });
 
   describe('Double paste prevention (the actual bug)', () => {
-    it('should send clipboard text exactly once even if onData fires simultaneously', () => {
-      const clipboardText = 'Hello World';
+    it('should send text exactly once even if onData fires simultaneously', () => {
+      const pasteText = 'Hello World';
 
-      // Step 1: User presses Cmd+V (keydown)
-      const keydownEvent = createKeyboardEvent('v', 'keydown', { metaKey: true });
-      handleCustomKeyEvent(keydownEvent, state, mockWs, clipboardText);
+      // Step 1: User pastes text
+      const pasteEvent = createPasteEvent([{ type: 'text/plain' }], pasteText);
+      handlePasteEvent(pasteEvent, state, mockWs);
 
       // Step 2: xterm.js fires onData with the same pasted text
       // (This was causing the double paste bug)
-      handleOnData(clipboardText, state, mockWs);
+      handleOnData(pasteText, state, mockWs);
 
       // Should only have sent once
       expect(mockWs.send).toHaveBeenCalledTimes(1);
-      expect(mockWs.send).toHaveBeenCalledWith(
-        JSON.stringify({ type: 'input', data: clipboardText })
-      );
+      expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({ type: 'input', data: pasteText }));
     });
 
     it('should handle multiple rapid pastes correctly', () => {
       // First paste
-      const keydown1 = createKeyboardEvent('v', 'keydown', { metaKey: true });
-      handleCustomKeyEvent(keydown1, state, mockWs, 'text1');
+      const paste1 = createPasteEvent([{ type: 'text/plain' }], 'text1');
+      handlePasteEvent(paste1, state, mockWs);
       handleOnData('text1', state, mockWs); // Duplicate attempt blocked
 
       expect(mockWs.send).toHaveBeenCalledTimes(1);
@@ -210,8 +253,8 @@ describe('Terminal paste handling', () => {
       state.isPasting = false;
 
       // Second paste
-      const keydown2 = createKeyboardEvent('v', 'keydown', { metaKey: true });
-      handleCustomKeyEvent(keydown2, state, mockWs, 'text2');
+      const paste2 = createPasteEvent([{ type: 'text/plain' }], 'text2');
+      handlePasteEvent(paste2, state, mockWs);
       handleOnData('text2', state, mockWs); // Duplicate attempt blocked
 
       expect(mockWs.send).toHaveBeenCalledTimes(2);
@@ -230,35 +273,41 @@ describe('Terminal paste handling', () => {
     it('should handle paste when WebSocket is not open', () => {
       mockWs.readyState = 0; // CONNECTING
 
-      const keydownEvent = createKeyboardEvent('v', 'keydown', { metaKey: true });
-      handleCustomKeyEvent(keydownEvent, state, mockWs, 'text');
+      const pasteEvent = createPasteEvent([{ type: 'text/plain' }], 'text');
+      const handled = handlePasteEvent(pasteEvent, state, mockWs);
 
-      // isPasting should still be set, but no send
-      expect(state.isPasting).toBe(true);
+      // Should not handle when WS not open
+      expect(handled).toBe(false);
       expect(mockWs.send).not.toHaveBeenCalled();
     });
 
     it('should handle paste when WebSocket is null', () => {
-      const keydownEvent = createKeyboardEvent('v', 'keydown', { metaKey: true });
-      handleCustomKeyEvent(keydownEvent, state, null, 'text');
+      const pasteEvent = createPasteEvent([{ type: 'text/plain' }], 'text');
+      const handled = handlePasteEvent(pasteEvent, state, null);
 
-      expect(state.isPasting).toBe(true);
+      expect(handled).toBe(false);
     });
 
-    it('should not trigger on other key combinations', () => {
-      // Cmd+C (copy, not paste)
-      const cmdC = createKeyboardEvent('c', 'keydown', { metaKey: true });
-      expect(handleCustomKeyEvent(cmdC, state, mockWs, '')).toBe(false);
+    it('should handle paste when clipboardData is null', () => {
+      const event = new Event('paste', { bubbles: true }) as ClipboardEvent;
+      Object.defineProperty(event, 'clipboardData', {
+        value: null,
+        writable: false,
+      });
 
-      // Plain V (no modifier)
-      const plainV = createKeyboardEvent('v', 'keydown', {});
-      expect(handleCustomKeyEvent(plainV, state, mockWs, '')).toBe(false);
+      const handled = handlePasteEvent(event, state, mockWs);
 
-      // Alt+V (option key)
-      const altV = new KeyboardEvent('keydown', { key: 'v', altKey: true });
-      expect(handleCustomKeyEvent(altV, state, mockWs, '')).toBe(false);
-
+      expect(handled).toBe(false);
       expect(mockWs.send).not.toHaveBeenCalled();
+    });
+
+    it('should handle HTML text paste (text/html)', () => {
+      const pasteEvent = createPasteEvent([{ type: 'text/html' }], '<p>formatted</p>');
+
+      const handled = handlePasteEvent(pasteEvent, state, mockWs);
+
+      // getData('text') returns the text data
+      expect(handled).toBe(true);
     });
   });
 });
