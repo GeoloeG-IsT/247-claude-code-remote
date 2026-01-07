@@ -59,33 +59,33 @@ describe('Shared Types', () => {
         id: 'session-1',
         machineId: 'machine-1',
         project: 'test-project',
-        status: 'running',
+        status: 'working',
         tmuxSession: 'project--brave-lion-42',
         startedAt: new Date(),
         endedAt: null,
       };
 
-      expect(session.status).toMatch(/^(running|stopped|waiting)$/);
+      expect(session.status).toMatch(/^(init|working|needs_attention|idle)$/);
     });
   });
 
   describe('SessionStatus types', () => {
-    it('only allows 3 valid status values', async () => {
+    it('only allows 4 valid status values', async () => {
       const types = await import('../src/types/index.js');
 
       // Test that the type exports exist
       expect(types).toBeDefined();
 
-      // Valid statuses
-      const validStatuses = ['working', 'needs_attention', 'idle'];
-      validStatuses.forEach(status => {
-        expect(['working', 'needs_attention', 'idle']).toContain(status);
+      // Valid statuses: init (starting), working (active), needs_attention (user intervention), idle (ended)
+      const validStatuses = ['init', 'working', 'needs_attention', 'idle'];
+      validStatuses.forEach((status) => {
+        expect(['init', 'working', 'needs_attention', 'idle']).toContain(status);
       });
     });
 
     it('AttentionReason has valid values', () => {
       const validReasons = ['permission', 'input', 'plan_approval', 'task_complete'];
-      validReasons.forEach(reason => {
+      validReasons.forEach((reason) => {
         expect(['permission', 'input', 'plan_approval', 'task_complete']).toContain(reason);
       });
     });

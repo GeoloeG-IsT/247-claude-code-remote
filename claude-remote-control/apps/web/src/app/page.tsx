@@ -18,8 +18,12 @@ import { HomeSidebar } from '@/components/HomeSidebar';
 import { DashboardContent } from '@/components/DashboardContent';
 import { SessionView } from '@/components/SessionView';
 import { NewSessionModal } from '@/components/NewSessionModal';
-import { AgentConnectionSettings, loadAgentConnection, saveAgentConnection } from '@/components/AgentConnectionSettings';
-import { useSessionPolling, type SessionWithMachine } from '@/contexts/SessionPollingContext';
+import {
+  AgentConnectionSettings,
+  loadAgentConnection,
+  saveAgentConnection,
+} from '@/components/AgentConnectionSettings';
+import { useSessionPolling } from '@/contexts/SessionPollingContext';
 import { cn } from '@/lib/utils';
 
 // Local "machine" derived from localStorage connection
@@ -47,8 +51,13 @@ const DEFAULT_MACHINE_ID = 'local-agent';
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { setMachines: setPollingMachines, getAllSessions, getArchivedSessions } = useSessionPolling();
-  const [agentConnection, setAgentConnection] = useState<ReturnType<typeof loadAgentConnection>>(null);
+  const {
+    setMachines: setPollingMachines,
+    getAllSessions,
+    getArchivedSessions,
+  } = useSessionPolling();
+  const [agentConnection, setAgentConnection] =
+    useState<ReturnType<typeof loadAgentConnection>>(null);
   const [loading, setLoading] = useState(true);
   const [connectionModalOpen, setConnectionModalOpen] = useState(false);
   const [newSessionOpen, setNewSessionOpen] = useState(false);
@@ -95,7 +104,7 @@ function HomeContent() {
 
     if (sessionParam && allSessions.length > 0) {
       const session = allSessions.find(
-        s => s.name === sessionParam && s.machineId === machineParam
+        (s) => s.name === sessionParam && s.machineId === machineParam
       );
       if (session) {
         setSelectedSession({
@@ -136,7 +145,7 @@ function HomeContent() {
       // ⌘F to toggle fullscreen when session is selected
       if ((e.metaKey || e.ctrlKey) && e.key === 'f' && selectedSession) {
         e.preventDefault();
-        setIsFullscreen(prev => !prev);
+        setIsFullscreen((prev) => !prev);
       }
     };
 
@@ -190,51 +199,61 @@ function HomeContent() {
   );
 
   // Handle session created (update name from --new to actual)
-  const handleSessionCreated = useCallback((actualSessionName: string) => {
-    if (selectedSession) {
-      setSelectedSession(prev => prev ? { ...prev, sessionName: actualSessionName } : null);
-      // Update URL with actual session name
-      const params = new URLSearchParams(searchParams.toString());
-      params.set('session', actualSessionName);
-      router.replace(`?${params.toString()}`, { scroll: false });
-    }
-  }, [selectedSession, searchParams, router]);
+  const handleSessionCreated = useCallback(
+    (actualSessionName: string) => {
+      if (selectedSession) {
+        setSelectedSession((prev) => (prev ? { ...prev, sessionName: actualSessionName } : null));
+        // Update URL with actual session name
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('session', actualSessionName);
+        router.replace(`?${params.toString()}`, { scroll: false });
+      }
+    },
+    [selectedSession, searchParams, router]
+  );
 
   // Handle session killed
-  const handleSessionKilled = useCallback((machineId: string, sessionName: string) => {
-    if (selectedSession?.sessionName === sessionName) {
-      setSelectedSession(null);
-      clearSessionFromUrl();
-    }
-  }, [selectedSession, clearSessionFromUrl]);
+  const handleSessionKilled = useCallback(
+    (machineId: string, sessionName: string) => {
+      if (selectedSession?.sessionName === sessionName) {
+        setSelectedSession(null);
+        clearSessionFromUrl();
+      }
+    },
+    [selectedSession, clearSessionFromUrl]
+  );
 
   // Handle session archived
-  const handleSessionArchived = useCallback((machineId: string, sessionName: string) => {
-    if (selectedSession?.sessionName === sessionName) {
-      setSelectedSession(null);
-      clearSessionFromUrl();
-    }
-  }, [selectedSession, clearSessionFromUrl]);
+  const handleSessionArchived = useCallback(
+    (machineId: string, sessionName: string) => {
+      if (selectedSession?.sessionName === sessionName) {
+        setSelectedSession(null);
+        clearSessionFromUrl();
+      }
+    },
+    [selectedSession, clearSessionFromUrl]
+  );
 
   // Connection saved handler
-  const handleConnectionSaved = useCallback((connection: ReturnType<typeof saveAgentConnection>) => {
-    setAgentConnection(connection);
-    const machine: LocalMachine = {
-      id: DEFAULT_MACHINE_ID,
-      name: connection.name || 'Local Agent',
-      status: 'online',
-      config: {
-        projects: [],
-        agentUrl: connection.url,
-      },
-    };
-    setPollingMachines([machine]);
-  }, [setPollingMachines]);
+  const handleConnectionSaved = useCallback(
+    (connection: ReturnType<typeof saveAgentConnection>) => {
+      setAgentConnection(connection);
+      const machine: LocalMachine = {
+        id: DEFAULT_MACHINE_ID,
+        name: connection.name || 'Local Agent',
+        status: 'online',
+        config: {
+          projects: [],
+          agentUrl: connection.url,
+        },
+      };
+      setPollingMachines([machine]);
+    },
+    [setPollingMachines]
+  );
 
   // Stats
-  const needsAttention = allSessions.filter(
-    (s) => s.status === 'needs_attention'
-  ).length;
+  const needsAttention = allSessions.filter((s) => s.status === 'needs_attention').length;
 
   // Get agent URL for selected session
   const getAgentUrl = useCallback(() => {
@@ -246,28 +265,30 @@ function HomeContent() {
   const getSelectedSessionInfo = useCallback(() => {
     if (!selectedSession) return undefined;
     return allSessions.find(
-      s => s.name === selectedSession.sessionName && s.machineId === selectedSession.machineId
+      (s) => s.name === selectedSession.sessionName && s.machineId === selectedSession.machineId
     );
   }, [selectedSession, allSessions]);
 
   // Derived machine for display
-  const currentMachine: LocalMachine | null = agentConnection ? {
-    id: DEFAULT_MACHINE_ID,
-    name: agentConnection.name || 'Local Agent',
-    status: 'online',
-    config: {
-      projects: [],
-      agentUrl: agentConnection.url,
-    },
-  } : null;
+  const currentMachine: LocalMachine | null = agentConnection
+    ? {
+        id: DEFAULT_MACHINE_ID,
+        name: agentConnection.name || 'Local Agent',
+        status: 'online',
+        config: {
+          projects: [],
+          agentUrl: agentConnection.url,
+        },
+      }
+    : null;
 
   // Loading state
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#0a0a10] flex items-center justify-center">
+      <main className="flex min-h-screen items-center justify-center bg-[#0a0a10]">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 rounded-full border-2 border-orange-500/30 border-t-orange-500 animate-spin" />
-          <p className="text-white/30 text-sm font-medium">Loading...</p>
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-500/30 border-t-orange-500" />
+          <p className="text-sm font-medium text-white/30">Loading...</p>
         </div>
       </main>
     );
@@ -276,52 +297,54 @@ function HomeContent() {
   // No connection state
   if (!agentConnection) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center relative bg-[#0a0a10] selection:bg-orange-500/20">
+      <main className="relative flex min-h-screen flex-col items-center justify-center bg-[#0a0a10] selection:bg-orange-500/20">
         {/* Ambient Background */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-orange-500/10 blur-[120px] rounded-full mix-blend-screen" />
-          <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-blue-500/10 blur-[120px] rounded-full mix-blend-screen" />
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute left-1/4 top-0 h-[500px] w-[500px] rounded-full bg-orange-500/10 mix-blend-screen blur-[120px]" />
+          <div className="absolute bottom-0 right-1/4 h-[500px] w-[500px] rounded-full bg-blue-500/10 mix-blend-screen blur-[120px]" />
         </div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative z-10 flex flex-col items-center text-center max-w-lg px-6"
+          className="relative z-10 flex max-w-lg flex-col items-center px-6 text-center"
         >
-          <div className="mb-8 relative group cursor-pointer" onClick={() => setConnectionModalOpen(true)}>
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-amber-500 blur-2xl opacity-20 group-hover:opacity-40 transition-opacity duration-500" />
-            <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-[#1c1c24] to-[#121218] border border-white/10 flex items-center justify-center shadow-2xl group-hover:scale-105 transition-transform duration-500">
-              <Zap className="w-10 h-10 text-orange-500 group-hover:text-amber-400 transition-colors duration-500" />
+          <div
+            className="group relative mb-8 cursor-pointer"
+            onClick={() => setConnectionModalOpen(true)}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-amber-500 opacity-20 blur-2xl transition-opacity duration-500 group-hover:opacity-40" />
+            <div className="relative flex h-24 w-24 items-center justify-center rounded-3xl border border-white/10 bg-gradient-to-br from-[#1c1c24] to-[#121218] shadow-2xl transition-transform duration-500 group-hover:scale-105">
+              <Zap className="h-10 w-10 text-orange-500 transition-colors duration-500 group-hover:text-amber-400" />
             </div>
 
             {/* Status dot */}
-            <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-[#0a0a10] flex items-center justify-center">
-              <div className="w-4 h-4 rounded-full bg-white/10 border border-white/10 group-hover:bg-orange-500 group-hover:border-orange-400 transition-colors" />
+            <div className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-[#0a0a10]">
+              <div className="h-4 w-4 rounded-full border border-white/10 bg-white/10 transition-colors group-hover:border-orange-400 group-hover:bg-orange-500" />
             </div>
           </div>
 
-          <h1 className="text-4xl font-bold text-white mb-4 tracking-tight">
-            Connect Agent
-          </h1>
-          <p className="text-lg text-white/40 mb-10 leading-relaxed">
-            Remote control for your local Claude Code agent.<br />
+          <h1 className="mb-4 text-4xl font-bold tracking-tight text-white">Connect Agent</h1>
+          <p className="mb-10 text-lg leading-relaxed text-white/40">
+            Remote control for your local Claude Code agent.
+            <br />
             Monitor sessions, edit files, and approve commands.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+          <div className="flex w-full flex-col items-center gap-4 sm:w-auto sm:flex-row">
             <button
               onClick={() => setConnectionModalOpen(true)}
               className={cn(
-                'group w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-semibold transition-all',
+                'group inline-flex w-full items-center justify-center gap-3 rounded-2xl px-8 py-4 font-semibold transition-all sm:w-auto',
                 'bg-gradient-to-r from-orange-500 to-amber-500 text-white',
-                'hover:shadow-[0_0_40px_-10px_rgba(249,115,22,0.4)] hover:scale-[1.02]',
+                'hover:scale-[1.02] hover:shadow-[0_0_40px_-10px_rgba(249,115,22,0.4)]',
                 'active:scale-[0.98]'
               )}
             >
-              <Wifi className="w-5 h-5" />
+              <Wifi className="h-5 w-5" />
               <span>Connect Now</span>
-              <div className="w-px h-4 bg-white/20 mx-1" />
-              <span className="opacity-60 text-xs uppercase tracking-wider">Local</span>
+              <div className="mx-1 h-4 w-px bg-white/20" />
+              <span className="text-xs uppercase tracking-wider opacity-60">Local</span>
             </button>
 
             <a
@@ -329,18 +352,16 @@ function HomeContent() {
               target="_blank"
               rel="noopener noreferrer"
               className={cn(
-                'w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-medium transition-all',
-                'bg-white/5 text-white/60 hover:text-white hover:bg-white/10 border border-white/5 hover:border-white/10'
+                'inline-flex w-full items-center justify-center gap-2 rounded-2xl px-8 py-4 font-medium transition-all sm:w-auto',
+                'border border-white/5 bg-white/5 text-white/60 hover:border-white/10 hover:bg-white/10 hover:text-white'
               )}
             >
-              <HelpCircle className="w-5 h-5" />
+              <HelpCircle className="h-5 w-5" />
               <span>Guide</span>
             </a>
           </div>
 
-          <p className="mt-8 text-xs text-white/20 font-mono">
-            v0.1.0 • waiting for connection
-          </p>
+          <p className="mt-8 font-mono text-xs text-white/20">v0.1.0 • waiting for connection</p>
         </motion.div>
 
         <AgentConnectionSettings
@@ -354,47 +375,53 @@ function HomeContent() {
 
   // Connected state - Split View Layout
   return (
-    <main className="h-screen flex flex-col bg-[#0a0a10] overflow-hidden">
+    <main className="flex h-screen flex-col overflow-hidden bg-[#0a0a10]">
       {/* Compact Header */}
-      <header className={cn(
-        'flex-none z-40 bg-[#0a0a10]/80 backdrop-blur-xl border-b border-white/5',
-        isFullscreen && selectedSession && 'hidden'
-      )}>
+      <header
+        className={cn(
+          'z-40 flex-none border-b border-white/5 bg-[#0a0a10]/80 backdrop-blur-xl',
+          isFullscreen && selectedSession && 'hidden'
+        )}
+      >
         <div className="px-4 py-2.5">
           <div className="flex items-center justify-between">
             {/* Logo & Title */}
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500/20 to-amber-500/20 border border-orange-500/20 flex items-center justify-center">
-                <Zap className="w-4 h-4 text-orange-500" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-orange-500/20 bg-gradient-to-br from-orange-500/20 to-amber-500/20">
+                <Zap className="h-4 w-4 text-orange-500" />
               </div>
               <div>
                 <h1 className="text-sm font-bold text-white">247</h1>
                 <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <p className="text-[10px] text-white/40 font-mono">{agentConnection.url}</p>
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                  <p className="font-mono text-[10px] text-white/40">{agentConnection.url}</p>
                 </div>
               </div>
             </div>
 
             {/* Global Stats */}
-            <div className="hidden md:flex items-center gap-6 bg-white/5 px-4 py-1.5 rounded-full border border-white/5">
+            <div className="hidden items-center gap-6 rounded-full border border-white/5 bg-white/5 px-4 py-1.5 md:flex">
               <div className="flex items-center gap-2 text-xs">
-                <Monitor className="w-3.5 h-3.5 text-white/30" />
+                <Monitor className="h-3.5 w-3.5 text-white/30" />
                 <span className="text-white/60">Local Agent</span>
-                <span className="text-emerald-400 font-medium text-[10px] px-1.5 py-0.5 bg-emerald-500/10 rounded-full">Online</span>
+                <span className="rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400">
+                  Online
+                </span>
               </div>
-              <div className="w-px h-3 bg-white/10" />
+              <div className="h-3 w-px bg-white/10" />
               <div className="flex items-center gap-2 text-xs">
-                <Activity className="w-3.5 h-3.5 text-white/30" />
-                <span className="text-white/80 font-medium">{allSessions.length}</span>
+                <Activity className="h-3.5 w-3.5 text-white/30" />
+                <span className="font-medium text-white/80">{allSessions.length}</span>
                 <span className="text-white/30">active sessions</span>
               </div>
               {needsAttention > 0 && (
                 <>
-                  <div className="w-px h-3 bg-white/10" />
+                  <div className="h-3 w-px bg-white/10" />
                   <div className="flex items-center gap-2 text-xs">
-                    <AlertCircle className="w-3.5 h-3.5 text-orange-400" />
-                    <span className="text-orange-400 font-medium">{needsAttention} action{needsAttention !== 1 ? 's' : ''} needed</span>
+                    <AlertCircle className="h-3.5 w-3.5 text-orange-400" />
+                    <span className="font-medium text-orange-400">
+                      {needsAttention} action{needsAttention !== 1 ? 's' : ''} needed
+                    </span>
                   </div>
                 </>
               )}
@@ -404,37 +431,37 @@ function HomeContent() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setConnectionModalOpen(true)}
-                className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+                className="rounded-lg p-2 text-white/40 transition-colors hover:bg-white/5 hover:text-white"
                 title="Connection settings"
               >
-                <Wifi className="w-4 h-4" />
+                <Wifi className="h-4 w-4" />
               </button>
 
               {selectedSession && (
                 <button
-                  onClick={() => setIsFullscreen(prev => !prev)}
-                  className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+                  onClick={() => setIsFullscreen((prev) => !prev)}
+                  className="rounded-lg p-2 text-white/40 transition-colors hover:bg-white/5 hover:text-white"
                   title={isFullscreen ? 'Exit fullscreen (⌘F)' : 'Fullscreen (⌘F)'}
                 >
                   {isFullscreen ? (
-                    <Minimize2 className="w-4 h-4" />
+                    <Minimize2 className="h-4 w-4" />
                   ) : (
-                    <Maximize2 className="w-4 h-4" />
+                    <Maximize2 className="h-4 w-4" />
                   )}
                 </button>
               )}
 
-              <div className="w-px h-4 bg-white/10 mx-1" />
+              <div className="mx-1 h-4 w-px bg-white/10" />
 
               <button
                 onClick={() => setNewSessionOpen(true)}
                 className={cn(
-                  'flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium text-sm transition-all',
+                  'flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all',
                   'bg-white text-black hover:bg-white/90',
                   'shadow-[0_0_20px_-5px_rgba(255,255,255,0.3)] active:scale-[0.98]'
                 )}
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">New Session</span>
               </button>
             </div>
@@ -443,7 +470,7 @@ function HomeContent() {
       </header>
 
       {/* Main Split View */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         {!isFullscreen && (
           <HomeSidebar
@@ -458,7 +485,7 @@ function HomeContent() {
         )}
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col overflow-hidden relative">
+        <div className="relative flex flex-1 flex-col overflow-hidden">
           {selectedSession ? (
             <SessionView
               sessionName={selectedSession.sessionName}
@@ -478,7 +505,9 @@ function HomeContent() {
               activeTab={activeTab}
               onTabChange={setActiveTab}
               onSelectSession={(machineId, sessionName) => {
-                const session = allSessions.find(s => s.machineId === machineId && s.name === sessionName);
+                const session = allSessions.find(
+                  (s) => s.machineId === machineId && s.name === sessionName
+                );
                 if (session) {
                   handleSelectSession(machineId, sessionName, session.project);
                 }
@@ -509,14 +538,16 @@ function HomeContent() {
 
 export default function Home() {
   return (
-    <Suspense fallback={
-      <main className="min-h-screen bg-[#0a0a10] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 rounded-full border-2 border-orange-500/30 border-t-orange-500 animate-spin" />
-          <p className="text-white/30 text-sm font-medium">Loading...</p>
-        </div>
-      </main>
-    }>
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-[#0a0a10]">
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-500/30 border-t-orange-500" />
+            <p className="text-sm font-medium text-white/30">Loading...</p>
+          </div>
+        </main>
+      }
+    >
       <HomeContent />
     </Suspense>
   );

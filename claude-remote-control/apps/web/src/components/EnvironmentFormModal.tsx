@@ -4,8 +4,13 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Trash2, Zap, Globe, Eye, EyeOff, AlertCircle, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { EnvironmentProvider, Environment, EnvironmentMetadata, EnvironmentIcon } from '@vibecompany/247-shared';
-import { ENVIRONMENT_PRESETS, DEFAULT_PROVIDER_ICONS } from '@vibecompany/247-shared';
+import type {
+  EnvironmentProvider,
+  Environment,
+  EnvironmentMetadata,
+  EnvironmentIcon,
+} from '@vibecompany/247-shared';
+import { ENVIRONMENT_PRESETS } from '@vibecompany/247-shared';
 import { IconPicker } from './IconPicker';
 
 interface EnvVariable {
@@ -14,7 +19,10 @@ interface EnvVariable {
   isSecret: boolean;
 }
 
-const providerConfig: Record<EnvironmentProvider, { icon: typeof Zap; label: string; color: string }> = {
+const providerConfig: Record<
+  EnvironmentProvider,
+  { icon: typeof Zap; label: string; color: string }
+> = {
   anthropic: { icon: Zap, label: 'Anthropic', color: 'orange' },
   openrouter: { icon: Globe, label: 'OpenRouter', color: 'emerald' },
 };
@@ -207,16 +215,16 @@ export function EnvironmentFormModal({
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
             onClick={(e) => e.stopPropagation()}
             className={cn(
-              'relative w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden flex flex-col',
-              'bg-[#0d0d14] border border-white/10 rounded-2xl',
+              'relative mx-4 flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden',
+              'rounded-2xl border border-white/10 bg-[#0d0d14]',
               'shadow-2xl shadow-black/50'
             )}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 flex-shrink-0">
+            <div className="flex flex-shrink-0 items-center justify-between border-b border-white/5 px-6 py-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500/20 to-amber-500/20 border border-orange-500/30 flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-orange-400" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-orange-500/30 bg-gradient-to-br from-orange-500/20 to-amber-500/20">
+                  <Zap className="h-5 w-5 text-orange-400" />
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-white">
@@ -227,119 +235,118 @@ export function EnvironmentFormModal({
               </div>
               <button
                 onClick={() => onOpenChange(false)}
-                className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-white transition-colors"
+                className="rounded-lg p-2 text-white/40 transition-colors hover:bg-white/5 hover:text-white"
               >
-                <X className="w-5 h-5" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* Content */}
-            <div className="p-6 space-y-6 overflow-y-auto flex-1">
+            <div className="flex-1 space-y-6 overflow-y-auto p-6">
               {/* Error */}
               {error && (
-                <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400">
-                  <AlertCircle className="w-4 h-4" />
+                <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-red-400">
+                  <AlertCircle className="h-4 w-4" />
                   <span className="text-sm">{error}</span>
                 </div>
               )}
 
               {/* Provider Selection */}
               <div>
-                <label className="block text-sm font-medium text-white/60 mb-3">Provider</label>
+                <label className="mb-3 block text-sm font-medium text-white/60">Provider</label>
                 <div className="grid grid-cols-2 gap-3">
-                  {(Object.entries(providerConfig) as [EnvironmentProvider, typeof providerConfig.anthropic][]).map(
-                    ([key, config]) => {
-                      const Icon = config.icon;
-                      const isSelected = provider === key;
-                      return (
-                        <button
-                          key={key}
-                          onClick={() => setProvider(key)}
-                          disabled={!!editingEnvironment}
-                          className={cn(
-                            'p-4 rounded-xl text-left transition-all',
-                            'border',
-                            isSelected
-                              ? `bg-${config.color}-500/10 border-${config.color}-500/50`
-                              : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20',
-                            editingEnvironment && 'opacity-60 cursor-not-allowed'
-                          )}
-                        >
-                          <div className="flex items-center gap-3">
-                            <Icon
+                  {(
+                    Object.entries(providerConfig) as [
+                      EnvironmentProvider,
+                      typeof providerConfig.anthropic,
+                    ][]
+                  ).map(([key, config]) => {
+                    const Icon = config.icon;
+                    const isSelected = provider === key;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setProvider(key)}
+                        disabled={!!editingEnvironment}
+                        className={cn(
+                          'rounded-xl p-4 text-left transition-all',
+                          'border',
+                          isSelected
+                            ? `bg-${config.color}-500/10 border-${config.color}-500/50`
+                            : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10',
+                          editingEnvironment && 'cursor-not-allowed opacity-60'
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Icon
+                            className={cn(
+                              'h-5 w-5',
+                              isSelected ? `text-${config.color}-400` : 'text-white/50'
+                            )}
+                          />
+                          <div>
+                            <span
                               className={cn(
-                                'w-5 h-5',
-                                isSelected ? `text-${config.color}-400` : 'text-white/50'
+                                'font-medium',
+                                isSelected ? 'text-white' : 'text-white/60'
                               )}
-                            />
-                            <div>
-                              <span
-                                className={cn(
-                                  'font-medium',
-                                  isSelected ? 'text-white' : 'text-white/60'
-                                )}
-                              >
-                                {config.label}
-                              </span>
-                              <p className="text-xs text-white/30 mt-0.5">
-                                {ENVIRONMENT_PRESETS[key].description}
-                              </p>
-                            </div>
+                            >
+                              {config.label}
+                            </span>
+                            <p className="mt-0.5 text-xs text-white/30">
+                              {ENVIRONMENT_PRESETS[key].description}
+                            </p>
                           </div>
-                        </button>
-                      );
-                    }
-                  )}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Name & Icon */}
               <div className="flex gap-4">
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-white/60 mb-2">Name</label>
+                  <label className="mb-2 block text-sm font-medium text-white/60">Name</label>
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g., Production, Development"
                     className={cn(
-                      'w-full px-4 py-3 rounded-xl',
-                      'bg-white/5 border border-white/10',
+                      'w-full rounded-xl px-4 py-3',
+                      'border border-white/10 bg-white/5',
                       'text-white placeholder:text-white/30',
-                      'focus:outline-none focus:border-orange-500/50 focus:bg-white/10',
+                      'focus:border-orange-500/50 focus:bg-white/10 focus:outline-none',
                       'transition-all'
                     )}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-white/60 mb-2">Icon</label>
-                  <IconPicker
-                    value={icon}
-                    onChange={setIcon}
-                    provider={provider}
-                  />
+                  <label className="mb-2 block text-sm font-medium text-white/60">Icon</label>
+                  <IconPicker value={icon} onChange={setIcon} provider={provider} />
                 </div>
               </div>
 
               {/* Environment Variables */}
               <div>
-                <div className="flex items-center justify-between mb-3">
+                <div className="mb-3 flex items-center justify-between">
                   <label className="text-sm font-medium text-white/60">Environment Variables</label>
                   <div className="flex items-center gap-2">
                     {variables.length > 0 && (
                       <button
                         onClick={() => setVariables([])}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 hover:bg-red-500/20 text-white/40 hover:text-red-400 border border-white/10 hover:border-red-500/30 transition-all"
+                        className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/40 transition-all hover:border-red-500/30 hover:bg-red-500/20 hover:text-red-400"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="h-3.5 w-3.5" />
                         Clear all
                       </button>
                     )}
                     <button
                       onClick={addVariable}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 hover:border-white/20 transition-all"
+                      className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/60 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white"
                     >
-                      <Plus className="w-3.5 h-3.5" />
+                      <Plus className="h-3.5 w-3.5" />
                       Add Variable
                     </button>
                   </div>
@@ -349,7 +356,7 @@ export function EnvironmentFormModal({
                   {variables.map((variable, index) => (
                     <div
                       key={index}
-                      className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/5"
+                      className="flex items-center gap-2 rounded-xl border border-white/5 bg-white/[0.02] p-3"
                     >
                       <input
                         type="text"
@@ -357,25 +364,25 @@ export function EnvironmentFormModal({
                         onChange={(e) => updateVariable(index, 'key', e.target.value)}
                         placeholder="KEY_NAME"
                         className={cn(
-                          'flex-1 px-3 py-2 rounded-lg font-mono text-sm',
-                          'bg-white/5 border border-white/10',
+                          'flex-1 rounded-lg px-3 py-2 font-mono text-sm',
+                          'border border-white/10 bg-white/5',
                           'text-white placeholder:text-white/30',
-                          'focus:outline-none focus:border-orange-500/50',
+                          'focus:border-orange-500/50 focus:outline-none',
                           'transition-all'
                         )}
                       />
                       <span className="text-white/20">=</span>
-                      <div className="flex-1 relative">
+                      <div className="relative flex-1">
                         <input
                           type={variable.isSecret && !showSecrets[index] ? 'password' : 'text'}
                           value={variable.value}
                           onChange={(e) => updateVariable(index, 'value', e.target.value)}
                           placeholder={variable.isSecret ? 'sk-...' : 'value'}
                           className={cn(
-                            'w-full px-3 py-2 pr-10 rounded-lg font-mono text-sm',
-                            'bg-white/5 border border-white/10',
+                            'w-full rounded-lg px-3 py-2 pr-10 font-mono text-sm',
+                            'border border-white/10 bg-white/5',
                             'text-white placeholder:text-white/30',
-                            'focus:outline-none focus:border-orange-500/50',
+                            'focus:border-orange-500/50 focus:outline-none',
                             'transition-all'
                           )}
                         />
@@ -384,33 +391,35 @@ export function EnvironmentFormModal({
                             onClick={() =>
                               setShowSecrets({ ...showSecrets, [index]: !showSecrets[index] })
                             }
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-white/30 hover:text-white/60 transition-colors"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-white/30 transition-colors hover:text-white/60"
                           >
                             {showSecrets[index] ? (
-                              <EyeOff className="w-4 h-4" />
+                              <EyeOff className="h-4 w-4" />
                             ) : (
-                              <Eye className="w-4 h-4" />
+                              <Eye className="h-4 w-4" />
                             )}
                           </button>
                         )}
                       </div>
                       <button
                         onClick={() => removeVariable(index)}
-                        className="p-2 rounded-lg hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors"
+                        className="rounded-lg p-2 text-white/30 transition-colors hover:bg-red-500/20 hover:text-red-400"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   ))}
 
                   {variables.length === 0 && (
-                    <div className="text-center py-8 text-white/30 border border-dashed border-white/10 rounded-xl">
-                      <Zap className="w-6 h-6 mx-auto mb-2 opacity-50" />
+                    <div className="rounded-xl border border-dashed border-white/10 py-8 text-center text-white/30">
+                      <Zap className="mx-auto mb-2 h-6 w-6 opacity-50" />
                       <p className="text-sm">No variables configured</p>
-                      <p className="text-xs text-white/20 mt-1">Will use system environment variables</p>
+                      <p className="mt-1 text-xs text-white/20">
+                        Will use system environment variables
+                      </p>
                       <button
                         onClick={addVariable}
-                        className="mt-3 text-orange-400 hover:text-orange-300 text-sm"
+                        className="mt-3 text-sm text-orange-400 hover:text-orange-300"
                       >
                         Add a variable
                       </button>
@@ -419,8 +428,8 @@ export function EnvironmentFormModal({
                 </div>
 
                 {/* Warning for secrets */}
-                <div className="flex items-start gap-2 mt-3 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
-                  <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+                  <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-400" />
                   <p className="text-xs text-amber-400/80">
                     API keys are stored locally on this machine and never sent to the cloud.
                   </p>
@@ -428,9 +437,9 @@ export function EnvironmentFormModal({
               </div>
 
               {/* Default Toggle */}
-              <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5">
+              <div className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] p-4">
                 <div className="flex items-center gap-3">
-                  <Star className="w-5 h-5 text-orange-400" />
+                  <Star className="h-5 w-5 text-orange-400" />
                   <div>
                     <p className="font-medium text-white/80">Set as default</p>
                     <p className="text-sm text-white/40">Use this environment for new sessions</p>
@@ -439,13 +448,13 @@ export function EnvironmentFormModal({
                 <button
                   onClick={() => setIsDefault(!isDefault)}
                   className={cn(
-                    'w-12 h-7 rounded-full transition-all',
+                    'h-7 w-12 rounded-full transition-all',
                     isDefault ? 'bg-orange-500' : 'bg-white/10'
                   )}
                 >
                   <div
                     className={cn(
-                      'w-5 h-5 rounded-full bg-white shadow-sm transition-transform',
+                      'h-5 w-5 rounded-full bg-white shadow-sm transition-transform',
                       isDefault ? 'translate-x-6' : 'translate-x-1'
                     )}
                   />
@@ -454,10 +463,10 @@ export function EnvironmentFormModal({
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-white/5 flex items-center justify-end gap-3 flex-shrink-0">
+            <div className="flex flex-shrink-0 items-center justify-end gap-3 border-t border-white/5 px-6 py-4">
               <button
                 onClick={() => onOpenChange(false)}
-                className="px-4 py-2.5 rounded-xl font-medium text-white/60 hover:text-white hover:bg-white/5 transition-all"
+                className="rounded-xl px-4 py-2.5 font-medium text-white/60 transition-all hover:bg-white/5 hover:text-white"
               >
                 Cancel
               </button>
@@ -465,10 +474,10 @@ export function EnvironmentFormModal({
                 onClick={handleSave}
                 disabled={!isValid || saving}
                 className={cn(
-                  'flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all',
+                  'flex items-center gap-2 rounded-xl px-5 py-2.5 font-medium transition-all',
                   isValid && !saving
-                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white shadow-lg shadow-orange-500/25'
-                    : 'bg-white/5 text-white/30 cursor-not-allowed'
+                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25 hover:from-orange-400 hover:to-amber-400'
+                    : 'cursor-not-allowed bg-white/5 text-white/30'
                 )}
               >
                 {saving ? 'Saving...' : editingEnvironment ? 'Save Changes' : 'Create Environment'}

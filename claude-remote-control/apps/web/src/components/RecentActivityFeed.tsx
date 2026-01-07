@@ -14,7 +14,6 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { useSessionPolling } from '@/contexts/SessionPollingContext';
-import { type SessionInfo } from '@/lib/notifications';
 import { type SessionStatus, type AttentionReason } from '@vibecompany/247-shared';
 import { formatRelativeTime } from '@/lib/time';
 import { cn } from '@/lib/utils';
@@ -86,10 +85,7 @@ const attentionLabels: Record<AttentionReason, string> = {
   task_complete: 'Done',
 };
 
-export function RecentActivityFeed({
-  onSelectSession,
-  limit = 15,
-}: RecentActivityFeedProps) {
+export function RecentActivityFeed({ onSelectSession, limit = 15 }: RecentActivityFeedProps) {
   const { sessionsByMachine } = useSessionPolling();
 
   // Aggregate all sessions from all online machines, sorted by activity
@@ -126,50 +122,52 @@ export function RecentActivityFeed({
 
   if (activityItems.length === 0) {
     return (
-      <div className="h-full flex flex-col">
-        <div className="flex items-center gap-2 mb-4">
-          <Activity className="w-4 h-4 text-white/40" />
+      <div className="flex h-full flex-col">
+        <div className="mb-4 flex items-center gap-2">
+          <Activity className="h-4 w-4 text-white/40" />
           <h3 className="text-sm font-medium text-white/60">Recent Activity</h3>
         </div>
-        <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
-          <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
-            <Clock className="w-5 h-5 text-white/20" />
+        <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/5">
+            <Clock className="h-5 w-5 text-white/20" />
           </div>
           <p className="text-sm text-white/30">No recent activity</p>
-          <p className="text-xs text-white/20 mt-1">Sessions will appear here</p>
+          <p className="mt-1 text-xs text-white/20">Sessions will appear here</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Activity className="w-4 h-4 text-white/40" />
+          <Activity className="h-4 w-4 text-white/40" />
           <h3 className="text-sm font-medium text-white/60">Recent Activity</h3>
         </div>
         {needsAttentionCount > 0 && (
-          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-500/20 text-orange-300 border border-orange-500/30">
+          <span className="rounded-full border border-orange-500/30 bg-orange-500/20 px-2 py-0.5 text-xs font-medium text-orange-300">
             {needsAttentionCount} need attention
           </span>
         )}
       </div>
 
       {/* Activity List */}
-      <div className="flex-1 overflow-y-auto space-y-1 -mx-2 px-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+      <div className="scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent -mx-2 flex-1 space-y-1 overflow-y-auto px-2">
         <AnimatePresence mode="popLayout">
           {activityItems.map((item, index) => {
             const config = statusConfig[item.status] || statusConfig.idle;
             // Use attention-specific icon if available
-            const Icon = item.status === 'needs_attention' && item.attentionReason
-              ? attentionIcons[item.attentionReason]
-              : config.icon;
+            const Icon =
+              item.status === 'needs_attention' && item.attentionReason
+                ? attentionIcons[item.attentionReason]
+                : config.icon;
             // Use attention-specific label if available
-            const label = item.status === 'needs_attention' && item.attentionReason
-              ? attentionLabels[item.attentionReason]
-              : config.label;
+            const label =
+              item.status === 'needs_attention' && item.attentionReason
+                ? attentionLabels[item.attentionReason]
+                : config.label;
             const needsAttention = item.status === 'needs_attention';
 
             return (
@@ -182,24 +180,24 @@ export function RecentActivityFeed({
                 transition={{ duration: 0.15, delay: index * 0.02 }}
                 onClick={() => onSelectSession(item.machineId, item.project, item.sessionName)}
                 className={cn(
-                  'w-full p-3 rounded-xl text-left transition-all group',
+                  'group w-full rounded-xl p-3 text-left transition-all',
                   'border',
                   needsAttention
-                    ? 'bg-orange-500/5 border-orange-500/20 hover:bg-orange-500/10'
-                    : 'bg-white/[0.02] border-transparent hover:bg-white/5 hover:border-white/10'
+                    ? 'border-orange-500/20 bg-orange-500/5 hover:bg-orange-500/10'
+                    : 'border-transparent bg-white/[0.02] hover:border-white/10 hover:bg-white/5'
                 )}
               >
                 <div className="flex items-start gap-3">
                   {/* Status Icon */}
                   <div
                     className={cn(
-                      'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
+                      'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg',
                       config.bgColor
                     )}
                   >
                     <Icon
                       className={cn(
-                        'w-4 h-4',
+                        'h-4 w-4',
                         config.color,
                         item.status === 'working' && 'animate-spin'
                       )}
@@ -207,37 +205,29 @@ export function RecentActivityFeed({
                   </div>
 
                   {/* Content */}
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm text-white truncate">
+                      <span className="truncate text-sm font-medium text-white">
                         {item.displayName}
                       </span>
                       {item.statusSource === 'hook' && (
-                        <Zap className="w-3 h-3 text-emerald-400/60 flex-shrink-0" />
+                        <Zap className="h-3 w-3 flex-shrink-0 text-emerald-400/60" />
                       )}
                     </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-white/40 truncate">
-                        {item.machineName}
-                      </span>
+                    <div className="mt-0.5 flex items-center gap-2">
+                      <span className="truncate text-xs text-white/40">{item.machineName}</span>
                       <span className="text-white/20">·</span>
-                      <span className="text-xs text-white/30 truncate">
-                        {item.project}
-                      </span>
+                      <span className="truncate text-xs text-white/30">{item.project}</span>
                     </div>
                   </div>
 
                   {/* Time & Status */}
-                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                  <div className="flex flex-shrink-0 flex-col items-end gap-1">
                     <span className="text-xs text-white/30">
                       {formatRelativeTime(item.timestamp)}
                     </span>
                     <span
-                      className={cn(
-                        'text-xs px-1.5 py-0.5 rounded',
-                        config.bgColor,
-                        config.color
-                      )}
+                      className={cn('rounded px-1.5 py-0.5 text-xs', config.bgColor, config.color)}
                     >
                       {label}
                     </span>
@@ -246,7 +236,7 @@ export function RecentActivityFeed({
 
                 {/* Attention pulse */}
                 {needsAttention && (
-                  <div className="absolute inset-0 rounded-xl border border-orange-500/30 animate-pulse pointer-events-none" />
+                  <div className="pointer-events-none absolute inset-0 animate-pulse rounded-xl border border-orange-500/30" />
                 )}
               </motion.button>
             );

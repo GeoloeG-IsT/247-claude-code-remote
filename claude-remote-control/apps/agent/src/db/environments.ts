@@ -174,7 +174,7 @@ export function updateEnvironment(id: string, req: UpdateEnvironmentRequest): En
     req.name ?? existing.name,
     req.provider ?? existing.provider,
     req.icon !== undefined ? req.icon : existing.icon,
-    req.isDefault !== undefined ? (req.isDefault ? 1 : 0) : (existing.isDefault ? 1 : 0),
+    req.isDefault !== undefined ? (req.isDefault ? 1 : 0) : existing.isDefault ? 1 : 0,
     JSON.stringify(updatedVariables),
     now,
     id
@@ -310,15 +310,15 @@ export function ensureDefaultEnvironment(): void {
       INSERT INTO environments (id, name, provider, icon, is_default, variables, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `
-    ).run('default-anthropic', 'Anthropic (Default)', 'anthropic', null, 1, JSON.stringify({ ANTHROPIC_API_KEY: '' }), now, now);
+    ).run(
+      'default-anthropic',
+      'Anthropic (Default)',
+      'anthropic',
+      null,
+      1,
+      JSON.stringify({ ANTHROPIC_API_KEY: '' }),
+      now,
+      now
+    );
   }
-}
-
-/**
- * Deprecated: No longer needed since we use SQLite
- * Kept for API compatibility during migration
- */
-export function loadEnvironments(): void {
-  // No-op: environments are now loaded from SQLite
-  console.log('[Environments] loadEnvironments() is deprecated, using SQLite');
 }

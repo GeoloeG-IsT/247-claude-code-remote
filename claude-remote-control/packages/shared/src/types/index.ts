@@ -54,10 +54,10 @@ export type SessionStatus = 'init' | 'working' | 'needs_attention' | 'idle';
 
 // Reason why Claude needs attention
 export type AttentionReason =
-  | 'permission'      // Claude needs permission to use a tool
-  | 'input'           // Claude is waiting for user input
-  | 'plan_approval'   // Claude has a plan to approve (ExitPlanMode)
-  | 'task_complete';  // Claude finished the task
+  | 'permission' // Claude needs permission to use a tool
+  | 'input' // Claude is waiting for user input
+  | 'plan_approval' // Claude has a plan to approve (ExitPlanMode)
+  | 'task_complete'; // Claude finished the task
 
 export type StatusSource = 'hook' | 'tmux';
 
@@ -85,9 +85,7 @@ export interface WSSessionInfo {
 }
 
 // WebSocket message types - Client to Agent (Status channel)
-export type WSStatusMessageToAgent =
-  | { type: 'status-subscribe' }
-  | { type: 'status-unsubscribe' };
+export type WSStatusMessageToAgent = { type: 'status-subscribe' } | { type: 'status-unsubscribe' };
 
 // WebSocket message types - Agent to Client (Status channel)
 export type WSStatusMessageFromAgent =
@@ -133,12 +131,29 @@ export type EnvironmentProvider = 'anthropic' | 'openrouter';
 
 // Available icons for environments
 export const ENVIRONMENT_ICON_OPTIONS = [
-  'zap', 'globe', 'bot', 'brain', 'cpu', 'server', 'cloud',
-  'rocket', 'flask', 'code', 'bug', 'wrench', 'shield', 'lock',
-  'star', 'sparkles', 'flame', 'moon', 'sun', 'leaf'
+  'zap',
+  'globe',
+  'bot',
+  'brain',
+  'cpu',
+  'server',
+  'cloud',
+  'rocket',
+  'flask',
+  'code',
+  'bug',
+  'wrench',
+  'shield',
+  'lock',
+  'star',
+  'sparkles',
+  'flame',
+  'moon',
+  'sun',
+  'leaf',
 ] as const;
 
-export type EnvironmentIcon = typeof ENVIRONMENT_ICON_OPTIONS[number];
+export type EnvironmentIcon = (typeof ENVIRONMENT_ICON_OPTIONS)[number];
 
 // Default icons per provider (fallback when icon is null)
 export const DEFAULT_PROVIDER_ICONS: Record<EnvironmentProvider, EnvironmentIcon> = {
@@ -186,12 +201,48 @@ export interface UpdateEnvironmentRequest {
   variables?: Record<string, string>;
 }
 
+// API Request/Response types for REST endpoints
+
+// Clone repository
+export interface CloneRequest {
+  repoUrl: string;
+  projectName?: string;
+}
+
+export interface CloneResponse {
+  success: boolean;
+  projectName?: string;
+  path?: string;
+  error?: string;
+}
+
+// Session archive
+export interface ArchiveSessionResponse {
+  success: boolean;
+  message: string;
+  session?: WSSessionInfo;
+}
+
+// Hook status notification (from Claude Code plugin)
+export interface HookStatusRequest {
+  event: string;
+  status: SessionStatus;
+  attention_reason?: AttentionReason;
+  session_id?: string;
+  tmux_session?: string;
+  project?: string;
+  timestamp?: string;
+}
+
 // Provider presets for UI
-export const ENVIRONMENT_PRESETS: Record<EnvironmentProvider, {
-  label: string;
-  defaultVariables: Record<string, string>;
-  description: string;
-}> = {
+export const ENVIRONMENT_PRESETS: Record<
+  EnvironmentProvider,
+  {
+    label: string;
+    defaultVariables: Record<string, string>;
+    description: string;
+  }
+> = {
   anthropic: {
     label: 'Anthropic',
     defaultVariables: {

@@ -1,21 +1,22 @@
 import { createServer } from './server.js';
 import { config } from './config.js';
+import { logger } from './logger.js';
 
 const PORT = config.agent?.port || 4678;
 
 async function main() {
-  console.log(`Starting 247 Agent for ${config.machine.name}...`);
+  logger.main.info({ machine: config.machine.name }, 'Starting 247 Agent');
 
   const server = await createServer();
 
   server.listen(PORT, () => {
-    console.log(`\n🚀 Agent running on http://localhost:${PORT}`);
-    console.log(`📡 Connect your dashboard to: ws://localhost:${PORT}`);
-    console.log(`\n💡 For remote access, use one of these options:`);
-    console.log(`   • Tailscale Funnel: tailscale funnel --bg --https=${PORT}`);
-    console.log(`   • Cloudflare Tunnel: cloudflared tunnel --url http://localhost:${PORT}`);
-    console.log(`   • SSH tunnel: ssh -L ${PORT}:localhost:${PORT} user@remote\n`);
+    logger.main.info({ port: PORT }, 'Agent running');
+    logger.main.info({ url: `ws://localhost:${PORT}` }, 'Dashboard connection URL');
+    logger.main.info('For remote access, use Tailscale Funnel, Cloudflare Tunnel, or SSH tunnel');
   });
 }
 
-main().catch(console.error);
+main().catch((err) => {
+  logger.main.error(err, 'Agent startup failed');
+  process.exit(1);
+});

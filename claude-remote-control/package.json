@@ -12,7 +12,10 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
-    "lint": "turbo lint",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "turbo typecheck",
     "clean": "turbo clean && rm -rf node_modules",
     "test": "turbo test",
@@ -20,12 +23,32 @@
     "test:integration": "turbo test:integration",
     "test:coverage": "turbo test -- --coverage",
     "dev:web": "pnpm --filter @vibecompany/247-web dev",
-    "dev:agent": "pnpm --filter @vibecompany/247-agent dev"
+    "dev:agent": "pnpm --filter @vibecompany/247-agent dev",
+    "prepare": "echo 'Husky hooks configured at repo root'"
   },
   "devDependencies": {
+    "@eslint/js": "^9.18.0",
     "@vitest/coverage-v8": "^4.0.16",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3",
+    "prettier": "^3.4.2",
+    "prettier-plugin-tailwindcss": "^0.6.11",
     "turbo": "^2.3.3",
     "typescript": "^5.7.2",
+    "typescript-eslint": "^8.21.0",
     "vitest": "^4.0.16"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix --max-warnings=-1",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   }
 }

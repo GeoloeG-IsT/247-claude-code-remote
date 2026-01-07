@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, Zap } from 'lucide-react';
+import { Search, Zap } from 'lucide-react';
 import { GlobalSessionCard } from './GlobalSessionCard';
 import { type SessionWithMachine } from '@/contexts/SessionPollingContext';
 import { cn } from '@/lib/utils';
@@ -56,8 +56,10 @@ export function SessionListView({ sessions, onSelectSession }: SessionListViewPr
         if (statusFilter === 'waiting')
           return s.status === 'needs_attention' && s.attentionReason !== 'task_complete';
         if (statusFilter === 'done')
-          return s.status === 'idle' ||
-            (s.status === 'needs_attention' && s.attentionReason === 'task_complete');
+          return (
+            s.status === 'idle' ||
+            (s.status === 'needs_attention' && s.attentionReason === 'task_complete')
+          );
         return true;
       });
     }
@@ -101,20 +103,20 @@ export function SessionListView({ sessions, onSelectSession }: SessionListViewPr
   return (
     <div className="space-y-4">
       {/* Search and Filters Row */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row">
         {/* Search */}
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
           <input
             type="text"
             placeholder="Search sessions..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className={cn(
-              'w-full pl-10 pr-4 py-2.5 rounded-xl',
-              'bg-white/5 border border-white/10',
+              'w-full rounded-xl py-2.5 pl-10 pr-4',
+              'border border-white/10 bg-white/5',
               'text-white placeholder:text-white/30',
-              'focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20',
+              'focus:border-orange-500/50 focus:outline-none focus:ring-1 focus:ring-orange-500/20',
               'transition-all'
             )}
           />
@@ -126,10 +128,10 @@ export function SessionListView({ sessions, onSelectSession }: SessionListViewPr
             value={projectFilter}
             onChange={(e) => setProjectFilter(e.target.value)}
             className={cn(
-              'px-4 py-2.5 rounded-xl appearance-none cursor-pointer',
-              'bg-white/5 border border-white/10',
-              'text-white text-sm',
-              'focus:outline-none focus:border-orange-500/50',
+              'cursor-pointer appearance-none rounded-xl px-4 py-2.5',
+              'border border-white/10 bg-white/5',
+              'text-sm text-white',
+              'focus:border-orange-500/50 focus:outline-none',
               'transition-all'
             )}
           >
@@ -148,10 +150,10 @@ export function SessionListView({ sessions, onSelectSession }: SessionListViewPr
             value={machineFilter}
             onChange={(e) => setMachineFilter(e.target.value)}
             className={cn(
-              'px-4 py-2.5 rounded-xl appearance-none cursor-pointer',
-              'bg-white/5 border border-white/10',
-              'text-white text-sm',
-              'focus:outline-none focus:border-orange-500/50',
+              'cursor-pointer appearance-none rounded-xl px-4 py-2.5',
+              'border border-white/10 bg-white/5',
+              'text-sm text-white',
+              'focus:border-orange-500/50 focus:outline-none',
               'transition-all'
             )}
           >
@@ -166,16 +168,16 @@ export function SessionListView({ sessions, onSelectSession }: SessionListViewPr
       </div>
 
       {/* Status Filter Pills */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex flex-wrap gap-2">
         {statusFilters.map((f) => (
           <button
             key={f.key}
             onClick={() => setStatusFilter(f.key)}
             className={cn(
-              'px-3 py-1.5 rounded-full text-sm font-medium transition-all',
+              'rounded-full px-3 py-1.5 text-sm font-medium transition-all',
               statusFilter === f.key
-                ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
-                : 'bg-white/5 text-white/50 border border-transparent hover:bg-white/10 hover:text-white/70'
+                ? 'border border-orange-500/30 bg-orange-500/20 text-orange-300'
+                : 'border border-transparent bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70'
             )}
           >
             {f.label}
@@ -206,10 +208,10 @@ export function SessionListView({ sessions, onSelectSession }: SessionListViewPr
 
         {filteredSessions.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-              <Zap className="w-8 h-8 text-white/20" />
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
+              <Zap className="h-8 w-8 text-white/20" />
             </div>
-            <h3 className="text-lg font-medium text-white/80 mb-2">No sessions found</h3>
+            <h3 className="mb-2 text-lg font-medium text-white/80">No sessions found</h3>
             <p className="text-sm text-white/40">
               {searchQuery || statusFilter !== 'all' || projectFilter || machineFilter
                 ? 'Try adjusting your filters'

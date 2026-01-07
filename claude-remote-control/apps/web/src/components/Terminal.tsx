@@ -22,7 +22,18 @@ interface TerminalProps {
 
 // Generate human-readable session names with project prefix (same as agent)
 function generateSessionName(project: string): string {
-  const adjectives = ['brave', 'swift', 'calm', 'bold', 'wise', 'keen', 'fair', 'wild', 'bright', 'cool'];
+  const adjectives = [
+    'brave',
+    'swift',
+    'calm',
+    'bold',
+    'wise',
+    'keen',
+    'fair',
+    'wild',
+    'bright',
+    'cool',
+  ];
   const nouns = ['lion', 'hawk', 'wolf', 'bear', 'fox', 'owl', 'deer', 'lynx', 'eagle', 'tiger'];
   const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
   const noun = nouns[Math.floor(Math.random() * nouns.length)];
@@ -30,7 +41,15 @@ function generateSessionName(project: string): string {
   return `${project}--${adj}-${noun}-${num}`;
 }
 
-export function Terminal({ agentUrl, project, sessionName, environmentId, onConnectionChange, onSessionCreated, claudeStatus }: TerminalProps) {
+export function Terminal({
+  agentUrl,
+  project,
+  sessionName,
+  environmentId,
+  onConnectionChange,
+  onSessionCreated,
+  claudeStatus,
+}: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [connected, setConnected] = useState(false);
@@ -44,6 +63,7 @@ export function Terminal({ agentUrl, project, sessionName, environmentId, onConn
   const fitAddonRef = useRef<FitAddon | null>(null);
   const searchAddonRef = useRef<SearchAddon | null>(null);
   const isSelectingRef = useRef(false);
+  const isPastingRef = useRef(false);
 
   // Generate session name ONCE on first render, persisted across re-mounts
   const generatedSessionRef = useRef<string | null>(null);
@@ -119,11 +139,7 @@ export function Terminal({ agentUrl, project, sessionName, environmentId, onConn
         closeSearch();
       }
       // Enter in search = Find next
-      if (
-        e.key === 'Enter' &&
-        searchVisible &&
-        document.activeElement === searchInputRef.current
-      ) {
+      if (e.key === 'Enter' && searchVisible && document.activeElement === searchInputRef.current) {
         e.preventDefault();
         if (e.shiftKey) {
           findPrevious();
@@ -208,7 +224,11 @@ export function Terminal({ agentUrl, project, sessionName, environmentId, onConn
       const currentTermForKeys = term;
       term.attachCustomKeyEventHandler((event) => {
         // Cmd+C (Mac) or Ctrl+C (Windows/Linux) with selection = copy
-        if ((event.metaKey || event.ctrlKey) && event.key === 'c' && currentTermForKeys.hasSelection()) {
+        if (
+          (event.metaKey || event.ctrlKey) &&
+          event.key === 'c' &&
+          currentTermForKeys.hasSelection()
+        ) {
           const selection = currentTermForKeys.getSelection();
           if (selection) {
             navigator.clipboard.writeText(selection);
@@ -217,12 +237,17 @@ export function Terminal({ agentUrl, project, sessionName, environmentId, onConn
           }
           return false; // Prevent terminal from receiving Ctrl+C
         }
-        // Cmd+V (Mac) or Ctrl+V (Windows/Linux) = paste
-        if ((event.metaKey || event.ctrlKey) && event.key === 'v') {
+        // Cmd+V (Mac) or Ctrl+V (Windows/Linux) = paste (only on keydown to avoid double events)
+        if ((event.metaKey || event.ctrlKey) && event.key === 'v' && event.type === 'keydown') {
+          isPastingRef.current = true;
           navigator.clipboard.readText().then((text) => {
             if (ws && ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify({ type: 'input', data: text }));
             }
+            // Clear flag after a short delay to catch any duplicate onData events
+            setTimeout(() => {
+              isPastingRef.current = false;
+            }, 50);
           });
           return false; // Prevent default paste behavior
         }
@@ -319,6 +344,8 @@ export function Terminal({ agentUrl, project, sessionName, environmentId, onConn
       };
 
       currentTerm.onData((data) => {
+        // Skip if paste in progress (to avoid duplicate sends from custom paste handler)
+        if (isPastingRef.current) return;
         if (currentWs.readyState === WebSocket.OPEN) {
           currentWs.send(JSON.stringify({ type: 'input', data }));
         }
@@ -400,7 +427,7 @@ export function Terminal({ agentUrl, project, sessionName, environmentId, onConn
   };
 
   return (
-    <div className="flex flex-col flex-1 relative overflow-hidden">
+    <div className="relative flex flex-1 flex-col overflow-hidden">
       {/* Toolbar */}
       <div
         className={cn(
@@ -413,7 +440,7 @@ export function Terminal({ agentUrl, project, sessionName, environmentId, onConn
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-white/60">{project}</span>
           <span className="text-white/20">/</span>
-          <span className="text-sm font-mono text-white/40">
+          <span className="font-mono text-sm text-white/40">
             {effectiveSessionName.split('--')[1] || 'new session'}
           </span>
         </div>
@@ -428,14 +455,14 @@ export function Terminal({ agentUrl, project, sessionName, environmentId, onConn
               onClick={startClaude}
               disabled={!connected}
               className={cn(
-                'flex items-center gap-2 px-3 py-1.5 rounded-lg',
+                'flex items-center gap-2 rounded-lg px-3 py-1.5',
                 'text-sm font-medium transition-all',
                 connected
-                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white shadow-lg shadow-orange-500/20'
-                  : 'bg-white/5 text-white/30 cursor-not-allowed'
+                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/20 hover:from-orange-400 hover:to-amber-400'
+                  : 'cursor-not-allowed bg-white/5 text-white/30'
               )}
             >
-              <Sparkles className="w-4 h-4" />
+              <Sparkles className="h-4 w-4" />
               <span>Start Claude</span>
             </button>
           )}
@@ -444,16 +471,12 @@ export function Terminal({ agentUrl, project, sessionName, environmentId, onConn
           <button
             onClick={copySelection}
             className={cn(
-              'p-2 rounded-lg transition-colors',
-              'text-white/40 hover:text-white hover:bg-white/5'
+              'rounded-lg p-2 transition-colors',
+              'text-white/40 hover:bg-white/5 hover:text-white'
             )}
             title="Copy selection"
           >
-            {copied ? (
-              <Check className="w-4 h-4 text-emerald-400" />
-            ) : (
-              <Copy className="w-4 h-4" />
-            )}
+            {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
           </button>
 
           {/* Search Button */}
@@ -465,14 +488,14 @@ export function Terminal({ agentUrl, project, sessionName, environmentId, onConn
               }
             }}
             className={cn(
-              'p-2 rounded-lg transition-colors',
+              'rounded-lg p-2 transition-colors',
               searchVisible
                 ? 'bg-white/10 text-white'
-                : 'text-white/40 hover:text-white hover:bg-white/5'
+                : 'text-white/40 hover:bg-white/5 hover:text-white'
             )}
             title="Search (⌘⇧F)"
           >
-            <Search className="w-4 h-4" />
+            <Search className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -486,7 +509,7 @@ export function Terminal({ agentUrl, project, sessionName, environmentId, onConn
             'border-b border-white/5'
           )}
         >
-          <Search className="w-4 h-4 text-white/30" />
+          <Search className="h-4 w-4 text-white/30" />
           <input
             ref={searchInputRef}
             type="text"
@@ -501,34 +524,31 @@ export function Terminal({ agentUrl, project, sessionName, environmentId, onConn
           <div className="flex items-center gap-1">
             <button
               onClick={findPrevious}
-              className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+              className="rounded p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
               title="Previous (⇧↵)"
             >
-              <ChevronUp className="w-4 h-4" />
+              <ChevronUp className="h-4 w-4" />
             </button>
             <button
               onClick={findNext}
-              className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+              className="rounded p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
               title="Next (↵)"
             >
-              <ChevronDown className="w-4 h-4" />
+              <ChevronDown className="h-4 w-4" />
             </button>
             <button
               onClick={closeSearch}
-              className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+              className="rounded p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
               title="Close (Esc)"
             >
-              <X className="w-4 h-4" />
+              <X className="h-4 w-4" />
             </button>
           </div>
         </div>
       )}
 
       {/* Terminal */}
-      <div
-        ref={terminalRef}
-        className="flex-1 bg-[#0a0a10] px-2 py-1"
-      />
+      <div ref={terminalRef} className="flex-1 bg-[#0a0a10] px-2 py-1" />
 
       {/* Scroll to bottom indicator */}
       {!isAtBottom && (
@@ -536,14 +556,14 @@ export function Terminal({ agentUrl, project, sessionName, environmentId, onConn
           onClick={scrollToBottom}
           className={cn(
             'absolute bottom-6 right-6 p-3',
-            'bg-orange-500/90 hover:bg-orange-400 backdrop-blur-sm',
-            'text-white rounded-full shadow-xl shadow-orange-500/30',
+            'bg-orange-500/90 backdrop-blur-sm hover:bg-orange-400',
+            'rounded-full text-white shadow-xl shadow-orange-500/30',
             'transition-all hover:scale-105 active:scale-95',
             'animate-bounce'
           )}
           title="Scroll to bottom"
         >
-          <ArrowDown className="w-5 h-5" />
+          <ArrowDown className="h-5 w-5" />
         </button>
       )}
     </div>

@@ -59,7 +59,6 @@ interface SessionPollingContextValue {
 const SessionPollingContext = createContext<SessionPollingContextValue | null>(null);
 
 const FALLBACK_POLLING_INTERVAL = 30000; // Fallback HTTP poll every 30s (when WS connected)
-const MACHINES_POLLING_INTERVAL = 30000;
 const FETCH_TIMEOUT = 5000;
 const WS_RECONNECT_BASE_DELAY = 1000;
 const WS_RECONNECT_MAX_DELAY = 30000;
@@ -171,7 +170,12 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
             session.lastStatusChange !== prevSession.lastStatusChange);
 
         if (isNewEvent && isActionable) {
-          console.log('[Notifications] TRIGGERING notification for:', session.name, session.status, session.attentionReason);
+          console.log(
+            '[Notifications] TRIGGERING notification for:',
+            session.name,
+            session.status,
+            session.attentionReason
+          );
           showSessionNotification(machineId, machineName, session);
         }
       }
@@ -410,7 +414,8 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
           });
 
           // Schedule reconnection with exponential backoff
-          const currentDelay = wsReconnectDelaysRef.current.get(machine.id) || WS_RECONNECT_BASE_DELAY;
+          const currentDelay =
+            wsReconnectDelaysRef.current.get(machine.id) || WS_RECONNECT_BASE_DELAY;
           const nextDelay = Math.min(currentDelay * 2, WS_RECONNECT_MAX_DELAY);
           wsReconnectDelaysRef.current.set(machine.id, nextDelay);
 
@@ -501,7 +506,9 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
 
     console.log('[Polling] HTTP polling', onlineMachines.length, 'machines');
 
-    const results = await Promise.all(onlineMachines.map((machine) => fetchSessionsForMachine(machine)));
+    const results = await Promise.all(
+      onlineMachines.map((machine) => fetchSessionsForMachine(machine))
+    );
 
     setSessionsByMachine((prev) => {
       const next = new Map(prev);
@@ -598,8 +605,7 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
   const value: SessionPollingContextValue = {
     sessionsByMachine,
     machines,
-    getSessionsForMachine: (machineId: string) =>
-      sessionsByMachine.get(machineId)?.sessions || [],
+    getSessionsForMachine: (machineId: string) => sessionsByMachine.get(machineId)?.sessions || [],
     getAllSessions,
     getArchivedSessions,
     getSession,
@@ -610,9 +616,7 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
     isWsConnected: (machineId: string) => sessionsByMachine.get(machineId)?.wsConnected ?? false,
   };
 
-  return (
-    <SessionPollingContext.Provider value={value}>{children}</SessionPollingContext.Provider>
-  );
+  return <SessionPollingContext.Provider value={value}>{children}</SessionPollingContext.Provider>;
 }
 
 export function useSessionPolling() {

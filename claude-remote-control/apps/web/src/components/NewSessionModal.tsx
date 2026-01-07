@@ -2,7 +2,18 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Monitor, Plus, ChevronDown, Sparkles, Loader2, GitBranch, FolderOpen, AlertCircle, Check } from 'lucide-react';
+import {
+  X,
+  Monitor,
+  Plus,
+  ChevronDown,
+  Sparkles,
+  Loader2,
+  GitBranch,
+  FolderOpen,
+  AlertCircle,
+  Check,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EnvironmentSelector } from './EnvironmentSelector';
 import { EnvironmentFormModal } from './EnvironmentFormModal';
@@ -174,7 +185,7 @@ export function NewSessionModal({
       } else {
         setCloneError(data.error || 'Clone failed');
       }
-    } catch (err) {
+    } catch {
       setCloneError('Network error - could not connect to agent');
     } finally {
       setCloning(false);
@@ -235,16 +246,16 @@ export function NewSessionModal({
             transition={{ duration: 0.2, ease: 'easeOut' }}
             onClick={(e) => e.stopPropagation()}
             className={cn(
-              'relative w-full max-w-2xl mx-4',
-              'bg-[#0d0d14] border border-white/10 rounded-2xl',
+              'relative mx-4 w-full max-w-2xl',
+              'rounded-2xl border border-white/10 bg-[#0d0d14]',
               'shadow-2xl shadow-black/50'
             )}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+            <div className="flex items-center justify-between border-b border-white/5 px-6 py-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500/20 to-amber-500/20 border border-orange-500/30 flex items-center justify-center">
-                  <Plus className="w-5 h-5 text-orange-400" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-orange-500/30 bg-gradient-to-br from-orange-500/20 to-amber-500/20">
+                  <Plus className="h-5 w-5 text-orange-400" />
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-white">New Session</h2>
@@ -253,49 +264,55 @@ export function NewSessionModal({
               </div>
               <button
                 onClick={() => onOpenChange(false)}
-                className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-white transition-colors"
+                className="rounded-lg p-2 text-white/40 transition-colors hover:bg-white/5 hover:text-white"
               >
-                <X className="w-5 h-5" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* Content */}
-            <div className="p-6 space-y-6">
+            <div className="space-y-6 p-6">
               {/* Machine Selection */}
               <div>
-                <label className="block text-sm font-medium text-white/60 mb-3">
+                <label className="mb-3 block text-sm font-medium text-white/60">
                   Select Machine
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {onlineMachines.map((machine) => (
                     <button
                       key={machine.id}
                       onClick={() => setSelectedMachine(machine)}
                       className={cn(
-                        'p-4 rounded-xl text-left transition-all',
+                        'rounded-xl p-4 text-left transition-all',
                         'border',
                         selectedMachine?.id === machine.id
-                          ? 'bg-orange-500/10 border-orange-500/50 shadow-lg shadow-orange-500/10'
-                          : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+                          ? 'border-orange-500/50 bg-orange-500/10 shadow-lg shadow-orange-500/10'
+                          : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
                       )}
                     >
-                      <div className="flex items-center gap-2 mb-2">
-                        <Monitor className={cn(
-                          'w-4 h-4',
-                          selectedMachine?.id === machine.id ? 'text-orange-400' : 'text-white/50'
-                        )} />
-                        <span className={cn(
-                          'w-2 h-2 rounded-full',
-                          'bg-emerald-400 shadow-sm shadow-emerald-400/50'
-                        )} />
+                      <div className="mb-2 flex items-center gap-2">
+                        <Monitor
+                          className={cn(
+                            'h-4 w-4',
+                            selectedMachine?.id === machine.id ? 'text-orange-400' : 'text-white/50'
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            'h-2 w-2 rounded-full',
+                            'bg-emerald-400 shadow-sm shadow-emerald-400/50'
+                          )}
+                        />
                       </div>
-                      <p className={cn(
-                        'font-medium truncate',
-                        selectedMachine?.id === machine.id ? 'text-white' : 'text-white/80'
-                      )}>
+                      <p
+                        className={cn(
+                          'truncate font-medium',
+                          selectedMachine?.id === machine.id ? 'text-white' : 'text-white/80'
+                        )}
+                      >
                         {machine.name}
                       </p>
-                      <p className="text-xs text-white/30 truncate font-mono mt-0.5">
+                      <p className="mt-0.5 truncate font-mono text-xs text-white/30">
                         {machine.config?.agentUrl || 'localhost:4678'}
                       </p>
                     </button>
@@ -306,35 +323,31 @@ export function NewSessionModal({
                     <div
                       key={machine.id}
                       className={cn(
-                        'p-4 rounded-xl',
-                        'bg-white/[0.02] border border-white/5',
-                        'opacity-50 cursor-not-allowed'
+                        'rounded-xl p-4',
+                        'border border-white/5 bg-white/[0.02]',
+                        'cursor-not-allowed opacity-50'
                       )}
                     >
-                      <div className="flex items-center gap-2 mb-2">
-                        <Monitor className="w-4 h-4 text-white/30" />
-                        <span className="w-2 h-2 rounded-full bg-red-400/50" />
+                      <div className="mb-2 flex items-center gap-2">
+                        <Monitor className="h-4 w-4 text-white/30" />
+                        <span className="h-2 w-2 rounded-full bg-red-400/50" />
                       </div>
-                      <p className="font-medium text-white/40 truncate">
-                        {machine.name}
-                      </p>
-                      <p className="text-xs text-white/20 truncate font-mono mt-0.5">
-                        offline
-                      </p>
+                      <p className="truncate font-medium text-white/40">{machine.name}</p>
+                      <p className="mt-0.5 truncate font-mono text-xs text-white/20">offline</p>
                     </div>
                   ))}
                 </div>
 
                 {machines.length === 0 && (
-                  <div className="text-center py-8 text-white/30">
-                    <Monitor className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <div className="py-8 text-center text-white/30">
+                    <Monitor className="mx-auto mb-2 h-8 w-8 opacity-50" />
                     <p>No machines registered</p>
                   </div>
                 )}
 
                 {machines.length > 0 && onlineMachines.length === 0 && (
-                  <div className="text-center py-8 text-white/30">
-                    <Monitor className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <div className="py-8 text-center text-white/30">
+                    <Monitor className="mx-auto mb-2 h-8 w-8 opacity-50" />
                     <p>All machines are offline</p>
                   </div>
                 )}
@@ -348,29 +361,29 @@ export function NewSessionModal({
                   transition={{ duration: 0.2 }}
                 >
                   {/* Tab Buttons */}
-                  <div className="flex gap-2 mb-4">
+                  <div className="mb-4 flex gap-2">
                     <button
                       onClick={() => setActiveTab('select')}
                       className={cn(
-                        'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
+                        'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
                         activeTab === 'select'
-                          ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                          : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10 border border-transparent'
+                          ? 'border border-orange-500/30 bg-orange-500/20 text-orange-400'
+                          : 'border border-transparent bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
                       )}
                     >
-                      <FolderOpen className="w-4 h-4" />
+                      <FolderOpen className="h-4 w-4" />
                       Select Folder
                     </button>
                     <button
                       onClick={() => setActiveTab('clone')}
                       className={cn(
-                        'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
+                        'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
                         activeTab === 'clone'
-                          ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                          : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10 border border-transparent'
+                          ? 'border border-orange-500/30 bg-orange-500/20 text-orange-400'
+                          : 'border border-transparent bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
                       )}
                     >
-                      <GitBranch className="w-4 h-4" />
+                      <GitBranch className="h-4 w-4" />
                       Clone Repo
                     </button>
                   </div>
@@ -380,16 +393,16 @@ export function NewSessionModal({
                     <div className="space-y-5">
                       {/* Project Selection */}
                       <div>
-                        <label className="block text-sm font-medium text-white/60 mb-3">
+                        <label className="mb-3 block text-sm font-medium text-white/60">
                           Select Project
                         </label>
                         <div className="relative">
                           <button
                             onClick={() => setProjectDropdownOpen(!projectDropdownOpen)}
                             className={cn(
-                              'w-full px-4 py-3 rounded-xl text-left',
-                              'bg-white/5 border border-white/10',
-                              'hover:bg-white/10 hover:border-white/20',
+                              'w-full rounded-xl px-4 py-3 text-left',
+                              'border border-white/10 bg-white/5',
+                              'hover:border-white/20 hover:bg-white/10',
                               'flex items-center justify-between',
                               'transition-all'
                             )}
@@ -397,10 +410,12 @@ export function NewSessionModal({
                             <span className={selectedProject ? 'text-white' : 'text-white/40'}>
                               {selectedProject || 'Choose a project...'}
                             </span>
-                            <ChevronDown className={cn(
-                              'w-4 h-4 text-white/40 transition-transform',
-                              projectDropdownOpen && 'rotate-180'
-                            )} />
+                            <ChevronDown
+                              className={cn(
+                                'h-4 w-4 text-white/40 transition-transform',
+                                projectDropdownOpen && 'rotate-180'
+                              )}
+                            />
                           </button>
 
                           {/* Dropdown */}
@@ -412,15 +427,15 @@ export function NewSessionModal({
                                 exit={{ opacity: 0, y: -5 }}
                                 transition={{ duration: 0.15 }}
                                 className={cn(
-                                  'absolute top-full left-0 right-0 mt-2 z-10',
-                                  'bg-[#12121a] border border-white/10 rounded-xl',
+                                  'absolute left-0 right-0 top-full z-10 mt-2',
+                                  'rounded-xl border border-white/10 bg-[#12121a]',
                                   'shadow-xl shadow-black/50',
                                   'max-h-64 overflow-y-auto'
                                 )}
                               >
                                 {loadingFolders ? (
-                                  <div className="px-4 py-3 text-white/30 text-sm flex items-center gap-2">
-                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  <div className="flex items-center gap-2 px-4 py-3 text-sm text-white/30">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
                                     Loading folders...
                                   </div>
                                 ) : folders.length > 0 ? (
@@ -433,10 +448,10 @@ export function NewSessionModal({
                                       }}
                                       className={cn(
                                         'w-full px-4 py-2.5 text-left',
-                                        'hover:bg-white/5 transition-colors',
+                                        'transition-colors hover:bg-white/5',
                                         'first:rounded-t-xl last:rounded-b-xl',
                                         selectedProject === folder
-                                          ? 'text-orange-400 bg-orange-500/10'
+                                          ? 'bg-orange-500/10 text-orange-400'
                                           : 'text-white/80'
                                       )}
                                     >
@@ -444,7 +459,7 @@ export function NewSessionModal({
                                     </button>
                                   ))
                                 ) : (
-                                  <div className="px-4 py-3 text-white/30 text-sm">
+                                  <div className="px-4 py-3 text-sm text-white/30">
                                     No folders found
                                   </div>
                                 )}
@@ -456,7 +471,7 @@ export function NewSessionModal({
 
                       {/* Environment Selection */}
                       <div>
-                        <label className="block text-sm font-medium text-white/60 mb-3">
+                        <label className="mb-3 block text-sm font-medium text-white/60">
                           Environment
                         </label>
                         <EnvironmentSelector
@@ -475,23 +490,25 @@ export function NewSessionModal({
                     <div className="space-y-4">
                       {/* Success Message */}
                       {cloneSuccess && (
-                        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
-                          <Check className="w-4 h-4" />
-                          <span className="text-sm">Successfully cloned <strong>{cloneSuccess}</strong></span>
+                        <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-emerald-400">
+                          <Check className="h-4 w-4" />
+                          <span className="text-sm">
+                            Successfully cloned <strong>{cloneSuccess}</strong>
+                          </span>
                         </div>
                       )}
 
                       {/* Error Message */}
                       {cloneError && (
-                        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400">
-                          <AlertCircle className="w-4 h-4" />
+                        <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-red-400">
+                          <AlertCircle className="h-4 w-4" />
                           <span className="text-sm">{cloneError}</span>
                         </div>
                       )}
 
                       {/* Repo URL Input */}
                       <div>
-                        <label className="block text-sm font-medium text-white/60 mb-2">
+                        <label className="mb-2 block text-sm font-medium text-white/60">
                           Repository URL
                         </label>
                         <input
@@ -500,10 +517,10 @@ export function NewSessionModal({
                           onChange={(e) => setRepoUrl(e.target.value)}
                           placeholder="https://github.com/user/repo or git@github.com:user/repo"
                           className={cn(
-                            'w-full px-4 py-3 rounded-xl',
-                            'bg-white/5 border border-white/10',
+                            'w-full rounded-xl px-4 py-3',
+                            'border border-white/10 bg-white/5',
                             'text-white placeholder:text-white/30',
-                            'focus:outline-none focus:border-orange-500/50 focus:bg-white/10',
+                            'focus:border-orange-500/50 focus:bg-white/10 focus:outline-none',
                             'transition-all'
                           )}
                         />
@@ -511,7 +528,7 @@ export function NewSessionModal({
 
                       {/* Project Name (optional) */}
                       <div>
-                        <label className="block text-sm font-medium text-white/60 mb-2">
+                        <label className="mb-2 block text-sm font-medium text-white/60">
                           Project Name <span className="text-white/30">(optional)</span>
                         </label>
                         <input
@@ -520,16 +537,17 @@ export function NewSessionModal({
                           onChange={(e) => setCustomProjectName(e.target.value)}
                           placeholder={previewedName || 'Auto-detected from URL'}
                           className={cn(
-                            'w-full px-4 py-3 rounded-xl',
-                            'bg-white/5 border border-white/10',
+                            'w-full rounded-xl px-4 py-3',
+                            'border border-white/10 bg-white/5',
                             'text-white placeholder:text-white/30',
-                            'focus:outline-none focus:border-orange-500/50 focus:bg-white/10',
+                            'focus:border-orange-500/50 focus:bg-white/10 focus:outline-none',
                             'transition-all'
                           )}
                         />
                         {previewedName && !customProjectName && (
-                          <p className="text-xs text-white/40 mt-1.5">
-                            Will be cloned as: <span className="text-orange-400">{previewedName}</span>
+                          <p className="mt-1.5 text-xs text-white/40">
+                            Will be cloned as:{' '}
+                            <span className="text-orange-400">{previewedName}</span>
                           </p>
                         )}
                       </div>
@@ -539,20 +557,20 @@ export function NewSessionModal({
                         onClick={handleClone}
                         disabled={!repoUrl || cloning}
                         className={cn(
-                          'w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium transition-all',
+                          'flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 font-medium transition-all',
                           repoUrl && !cloning
-                            ? 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white shadow-lg shadow-orange-500/25'
-                            : 'bg-white/5 text-white/30 cursor-not-allowed'
+                            ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25 hover:from-orange-400 hover:to-amber-400'
+                            : 'cursor-not-allowed bg-white/5 text-white/30'
                         )}
                       >
                         {cloning ? (
                           <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader2 className="h-4 w-4 animate-spin" />
                             Cloning...
                           </>
                         ) : (
                           <>
-                            <GitBranch className="w-4 h-4" />
+                            <GitBranch className="h-4 w-4" />
                             Clone Repository
                           </>
                         )}
@@ -565,21 +583,25 @@ export function NewSessionModal({
 
             {/* Footer - only show start button when on select tab */}
             {activeTab === 'select' && (
-              <div className="px-6 py-4 border-t border-white/5 flex items-center justify-between">
+              <div className="flex items-center justify-between border-t border-white/5 px-6 py-4">
                 <p className="text-xs text-white/30">
-                  Press <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-white/50 font-mono">Enter</kbd> to start
+                  Press{' '}
+                  <kbd className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-white/50">
+                    Enter
+                  </kbd>{' '}
+                  to start
                 </p>
                 <button
                   onClick={handleStartSession}
                   disabled={!selectedMachine || !selectedProject}
                   className={cn(
-                    'flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all',
+                    'flex items-center gap-2 rounded-xl px-5 py-2.5 font-medium transition-all',
                     selectedMachine && selectedProject
-                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white shadow-lg shadow-orange-500/25'
-                      : 'bg-white/5 text-white/30 cursor-not-allowed'
+                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25 hover:from-orange-400 hover:to-amber-400'
+                      : 'cursor-not-allowed bg-white/5 text-white/30'
                   )}
                 >
-                  <Sparkles className="w-4 h-4" />
+                  <Sparkles className="h-4 w-4" />
                   Start Session
                 </button>
               </div>

@@ -72,6 +72,64 @@ pnpm lint             # Lint all packages
 - **Always run tests** - Run `pnpm test` before committing any changes. All tests must pass.
 - **Always add relevant tests** - When adding or modifying features, write corresponding unit/integration tests. No code change without appropriate test coverage.
 
+## Testing Rules
+
+- **Always add tests for new code** - Every new feature, function, or component must have corresponding tests
+- **Never delete tests without confirmation** - Ask before removing any existing tests
+- **Minimum 80% coverage** - New code should aim for 80%+ test coverage
+- **Test existing patterns** - Check existing tests in `tests/` directories for patterns and helpers
+- **Mock external dependencies** - Use vitest mocks for external modules, browser APIs, and network calls
+
+### Test Commands
+
+```bash
+# Run all tests
+pnpm test
+
+# Run tests for specific package
+pnpm --filter @vibecompany/247-agent test
+pnpm --filter @vibecompany/247-cli test
+pnpm --filter @vibecompany/247-web test
+pnpm --filter @vibecompany/247-shared test
+
+# Run tests with coverage
+pnpm --filter @vibecompany/247-agent test -- --coverage
+pnpm --filter @vibecompany/247-cli test -- --coverage
+pnpm --filter @vibecompany/247-web test -- --coverage
+
+# Run tests in watch mode
+pnpm --filter @vibecompany/247-agent test -- --watch
+```
+
+### Test File Structure
+
+```
+apps/agent/tests/
+├── unit/           # Unit tests for individual modules
+│   ├── db/         # Database module tests
+│   └── ...
+└── integration/    # Integration tests for API contracts
+
+packages/cli/tests/
+├── unit/           # Unit tests for commands and utilities
+│   ├── commands/   # Command-specific tests
+│   └── ...
+└── integration/    # Workflow integration tests
+
+apps/web/tests/
+├── setup.ts        # Test setup with browser mocks
+└── unit/           # Unit tests for components and utilities
+    ├── components/ # Component logic tests
+    └── lib/        # Library function tests
+```
+
+### What to Test
+
+- **Agent**: Database operations, API endpoints, WebSocket protocol, config validation
+- **CLI**: Command behavior, prerequisites checks, path utilities, service management
+- **Web**: Notification logic, session sorting/filtering, time formatting, type guards
+- **Shared**: Type definitions, protocol message validation, contract compliance
+
 ## Key Technical Decisions
 
 - **pnpm workspaces + Turbo** for monorepo orchestration

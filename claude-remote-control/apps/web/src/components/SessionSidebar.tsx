@@ -2,22 +2,11 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-  Search,
-  Zap,
-  Clock,
-  Filter,
-  Keyboard,
-  X,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Search, Zap, Keyboard, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { SessionCard } from './SessionCard';
 import { SessionPreviewPopover } from './SessionPreviewPopover';
 import { type SessionInfo } from '@/lib/notifications';
-import { type SessionStatus } from '@vibecompany/247-shared';
 import { cn } from '@/lib/utils';
 
 interface SessionSidebarProps {
@@ -35,7 +24,7 @@ type FilterType = 'all' | 'active' | 'waiting' | 'done';
 
 export function SessionSidebar({
   sessions,
-  projects,
+  projects: _projects,
   currentSessionName,
   currentProject,
   onSelectSession,
@@ -86,9 +75,7 @@ export function SessionSidebar({
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
-        (s) =>
-          s.name.toLowerCase().includes(query) ||
-          s.project.toLowerCase().includes(query)
+        (s) => s.name.toLowerCase().includes(query) || s.project.toLowerCase().includes(query)
       );
     }
 
@@ -99,8 +86,10 @@ export function SessionSidebar({
         if (filter === 'waiting')
           return s.status === 'needs_attention' && s.attentionReason !== 'task_complete';
         if (filter === 'done')
-          return s.status === 'idle' ||
-            (s.status === 'needs_attention' && s.attentionReason === 'task_complete');
+          return (
+            s.status === 'idle' ||
+            (s.status === 'needs_attention' && s.attentionReason === 'task_complete')
+          );
         return true;
       });
     }
@@ -150,9 +139,7 @@ export function SessionSidebar({
       // Option + [ and ] to navigate sessions
       if (e.altKey && !e.metaKey && !e.ctrlKey && (e.code === 'BracketLeft' || e.key === '[')) {
         e.preventDefault();
-        const currentIndex = filteredSessions.findIndex(
-          (s) => s.name === currentSessionName
-        );
+        const currentIndex = filteredSessions.findIndex((s) => s.name === currentSessionName);
         if (currentIndex > 0) {
           const session = filteredSessions[currentIndex - 1];
           onSelectSession(session.name, session.project);
@@ -161,9 +148,7 @@ export function SessionSidebar({
 
       if (e.altKey && !e.metaKey && !e.ctrlKey && (e.code === 'BracketRight' || e.key === ']')) {
         e.preventDefault();
-        const currentIndex = filteredSessions.findIndex(
-          (s) => s.name === currentSessionName
-        );
+        const currentIndex = filteredSessions.findIndex((s) => s.name === currentSessionName);
         if (currentIndex < filteredSessions.length - 1) {
           const session = filteredSessions[currentIndex + 1];
           onSelectSession(session.name, session.project);
@@ -209,19 +194,19 @@ export function SessionSidebar({
         animate={{ width: isCollapsed ? 64 : 320 }}
         transition={{ duration: 0.2, ease: 'easeInOut' }}
         className={cn(
-          'h-full flex flex-col border-r border-white/5',
+          'flex h-full flex-col border-r border-white/5',
           'bg-gradient-to-b from-[#0d0d14] to-[#0a0a10]'
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-3 border-b border-white/5">
+        <div className="flex items-center justify-between border-b border-white/5 p-3">
           {!isCollapsed && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="flex items-center gap-2"
             >
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
               <span className="text-sm font-medium text-white/70">
                 {sessions.length} session{sessions.length !== 1 ? 's' : ''}
               </span>
@@ -229,12 +214,12 @@ export function SessionSidebar({
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1.5 rounded-lg hover:bg-white/5 text-white/50 hover:text-white/80 transition-colors"
+            className="rounded-lg p-1.5 text-white/50 transition-colors hover:bg-white/5 hover:text-white/80"
           >
             {isCollapsed ? (
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="h-4 w-4" />
             ) : (
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="h-4 w-4" />
             )}
           </button>
         </div>
@@ -246,37 +231,35 @@ export function SessionSidebar({
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="p-3 space-y-3 border-b border-white/5"
+              className="space-y-3 border-b border-white/5 p-3"
             >
               {/* Search */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
                 <input
                   type="text"
                   placeholder="Search sessions..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20 transition-all"
+                  className="w-full rounded-lg border border-white/10 bg-white/5 py-2 pl-9 pr-3 text-sm text-white transition-all placeholder:text-white/30 focus:border-orange-500/50 focus:outline-none focus:ring-1 focus:ring-orange-500/20"
                 />
               </div>
 
               {/* Filter pills */}
-              <div className="flex gap-1.5 flex-wrap">
+              <div className="flex flex-wrap gap-1.5">
                 {filters.map((f) => (
                   <button
                     key={f.key}
                     onClick={() => setFilter(f.key)}
                     className={cn(
-                      'px-2.5 py-1 rounded-full text-xs font-medium transition-all',
+                      'rounded-full px-2.5 py-1 text-xs font-medium transition-all',
                       filter === f.key
-                        ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
-                        : 'bg-white/5 text-white/50 border border-transparent hover:bg-white/10 hover:text-white/70'
+                        ? 'border border-orange-500/30 bg-orange-500/20 text-orange-300'
+                        : 'border border-transparent bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70'
                     )}
                   >
                     {f.label}
-                    {f.count > 0 && (
-                      <span className="ml-1.5 opacity-60">{f.count}</span>
-                    )}
+                    {f.count > 0 && <span className="ml-1.5 opacity-60">{f.count}</span>}
                   </button>
                 ))}
               </div>
@@ -289,7 +272,7 @@ export function SessionSidebar({
           <button
             onClick={() => onNewSession(currentProject)}
             className={cn(
-              'flex items-center justify-center gap-2 w-full py-2.5 rounded-lg font-medium text-sm transition-all',
+              'flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all',
               'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400',
               'text-white shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30',
               'active:scale-[0.98]',
@@ -297,13 +280,13 @@ export function SessionSidebar({
             )}
             title={isCollapsed ? 'New Session (⌘N)' : undefined}
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
             {!isCollapsed && <span>New Session</span>}
           </button>
         </div>
 
         {/* Sessions List */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-1 space-y-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+        <div className="scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-1">
           <AnimatePresence mode="popLayout">
             {filteredSessions.map((session, index) => (
               <motion.div
@@ -330,11 +313,11 @@ export function SessionSidebar({
 
           {filteredSessions.length === 0 && !isCollapsed && (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
-                <Zap className="w-5 h-5 text-white/20" />
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/5">
+                <Zap className="h-5 w-5 text-white/20" />
               </div>
               <p className="text-sm text-white/40">No sessions found</p>
-              <p className="text-xs text-white/20 mt-1">
+              <p className="mt-1 text-xs text-white/20">
                 {searchQuery || filter !== 'all'
                   ? 'Try adjusting your filters'
                   : 'Create a new session to get started'}
@@ -345,12 +328,12 @@ export function SessionSidebar({
 
         {/* Keyboard shortcut hint */}
         {!isCollapsed && (
-          <div className="p-3 border-t border-white/5">
+          <div className="border-t border-white/5 p-3">
             <button
               onClick={() => setShowShortcuts(true)}
-              className="flex items-center gap-2 text-xs text-white/30 hover:text-white/50 transition-colors"
+              className="flex items-center gap-2 text-xs text-white/30 transition-colors hover:text-white/50"
             >
-              <Keyboard className="w-3.5 h-3.5" />
+              <Keyboard className="h-3.5 w-3.5" />
               <span>Press ? for shortcuts</span>
             </button>
           </div>
@@ -379,15 +362,15 @@ export function SessionSidebar({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#12121a] border border-white/10 rounded-xl p-6 w-full max-w-md shadow-2xl"
+              className="w-full max-w-md rounded-xl border border-white/10 bg-[#12121a] p-6 shadow-2xl"
             >
-              <div className="flex items-center justify-between mb-6">
+              <div className="mb-6 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-white">Keyboard Shortcuts</h3>
                 <button
                   onClick={() => setShowShortcuts(false)}
-                  className="p-1 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+                  className="rounded-lg p-1 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="h-5 w-5" />
                 </button>
               </div>
 
@@ -416,7 +399,7 @@ function ShortcutRow({ keys, description }: { keys: string[]; description: strin
         {keys.map((key, i) => (
           <kbd
             key={i}
-            className="px-2 py-1 bg-white/10 rounded text-xs font-mono text-white/80 border border-white/10"
+            className="rounded border border-white/10 bg-white/10 px-2 py-1 font-mono text-xs text-white/80"
           >
             {key}
           </kbd>

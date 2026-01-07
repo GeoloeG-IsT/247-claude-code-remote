@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Coverage
+coverage/
+
+# Generated files
+*.d.ts
+pnpm-lock.yaml
+
+# Editor
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Turbo
+.turbo/

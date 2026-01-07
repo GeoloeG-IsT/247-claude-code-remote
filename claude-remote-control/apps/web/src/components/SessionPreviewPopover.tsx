@@ -42,11 +42,7 @@ const attentionLabels: Record<AttentionReason, string> = {
 
 const REFRESH_INTERVAL = 2000; // Refresh every 2 seconds while hovering
 
-export function SessionPreviewPopover({
-  session,
-  position,
-  agentUrl,
-}: SessionPreviewPopoverProps) {
+export function SessionPreviewPopover({ session, position, agentUrl }: SessionPreviewPopoverProps) {
   const [snapshot, setSnapshot] = useState<TerminalSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -156,9 +152,10 @@ export function SessionPreviewPopover({
   const displayName = session.name.split('--')[1] || session.name;
 
   // Use attention-specific label if available
-  const label = status === 'needs_attention' && attentionReason
-    ? attentionLabels[attentionReason]
-    : statusLabels[status] || status;
+  const label =
+    status === 'needs_attention' && attentionReason
+      ? attentionLabels[attentionReason]
+      : statusLabels[status] || status;
 
   return (
     <AnimatePresence>
@@ -178,26 +175,24 @@ export function SessionPreviewPopover({
         >
           <div
             className={cn(
-              'w-96 rounded-xl overflow-hidden',
+              'w-96 overflow-hidden rounded-xl',
               'bg-[#0a0a10]/95 backdrop-blur-xl',
               'border border-white/10',
               'shadow-2xl shadow-black/50'
             )}
           >
             {/* Header */}
-            <div className="px-4 py-3 border-b border-white/5 bg-white/5">
+            <div className="border-b border-white/5 bg-white/5 px-4 py-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <TerminalIcon className="w-4 h-4 text-white/50" />
-                  <span className="font-medium text-sm text-white">{displayName}</span>
+                  <TerminalIcon className="h-4 w-4 text-white/50" />
+                  <span className="text-sm font-medium text-white">{displayName}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  {isRefreshing && (
-                    <RefreshCw className="w-3 h-3 text-white/30 animate-spin" />
-                  )}
+                  {isRefreshing && <RefreshCw className="h-3 w-3 animate-spin text-white/30" />}
                   <span
                     className={cn(
-                      'px-2 py-0.5 rounded-full text-xs font-medium',
+                      'rounded-full px-2 py-0.5 text-xs font-medium',
                       statusColors[status]
                     )}
                   >
@@ -205,15 +200,15 @@ export function SessionPreviewPopover({
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-3 mt-2 text-xs text-white/40">
+              <div className="mt-2 flex items-center gap-3 text-xs text-white/40">
                 <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
+                  <Clock className="h-3 w-3" />
                   {formatRelativeTime(session.createdAt)}
                 </span>
                 <span>{session.project}</span>
                 {session.statusSource === 'hook' && (
                   <span className="flex items-center gap-0.5 text-emerald-400/60">
-                    <Zap className="w-3 h-3" />
+                    <Zap className="h-3 w-3" />
                     Live
                   </span>
                 )}
@@ -224,16 +219,16 @@ export function SessionPreviewPopover({
             <div className="p-2">
               <div
                 className={cn(
-                  'h-48 rounded-lg overflow-hidden',
+                  'h-48 overflow-hidden rounded-lg',
                   'bg-[#0a0a10] font-mono text-xs leading-relaxed',
-                  'p-3 overflow-y-auto',
+                  'overflow-y-auto p-3',
                   'border border-white/5'
                 )}
               >
                 {loading ? (
-                  <div className="flex items-center justify-center h-full">
+                  <div className="flex h-full items-center justify-center">
                     <div className="flex items-center gap-2 text-white/30">
-                      <div className="w-4 h-4 border-2 border-white/20 border-t-orange-500 rounded-full animate-spin" />
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-orange-500" />
                       <span>Loading preview...</span>
                     </div>
                   </div>
@@ -242,7 +237,7 @@ export function SessionPreviewPopover({
                     {snapshot.lines.map((line, i) => (
                       <div
                         key={i}
-                        className="text-white/80 whitespace-pre overflow-hidden text-ellipsis"
+                        className="overflow-hidden text-ellipsis whitespace-pre text-white/80"
                         dangerouslySetInnerHTML={{
                           __html: parseAnsiToHtml(line),
                         }}
@@ -250,7 +245,7 @@ export function SessionPreviewPopover({
                     ))}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-full text-white/30">
+                  <div className="flex h-full items-center justify-center text-white/30">
                     <span>No output yet</span>
                   </div>
                 )}
@@ -258,10 +253,10 @@ export function SessionPreviewPopover({
             </div>
 
             {/* Footer hint */}
-            <div className="px-4 py-2 border-t border-white/5 bg-white/5">
+            <div className="border-t border-white/5 bg-white/5 px-4 py-2">
               <div className="flex items-center justify-between text-xs text-white/40">
                 <span>Click to connect</span>
-                <ArrowRight className="w-3 h-3" />
+                <ArrowRight className="h-3 w-3" />
               </div>
             </div>
           </div>
@@ -302,7 +297,8 @@ function parseAnsiToHtml(text: string): string {
   // Escape HTML
   let result = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-  // Parse ANSI codes
+  // Parse ANSI codes (intentionally uses control characters)
+  // eslint-disable-next-line no-control-regex
   result = result.replace(/\x1b\[([0-9;]+)m/g, (_, codes) => {
     const codeList = codes.split(';');
 
@@ -324,7 +320,8 @@ function parseAnsiToHtml(text: string): string {
     return '';
   });
 
-  // Handle simple reset codes
+  // Handle simple reset codes (intentionally uses control characters)
+  // eslint-disable-next-line no-control-regex
   result = result.replace(/\x1b\[0m/g, '</span>');
 
   return result;

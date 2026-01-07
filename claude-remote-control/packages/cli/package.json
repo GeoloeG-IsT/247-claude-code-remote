@@ -2,7 +2,15 @@
   "name": "@vibecompany/247-cli",
   "version": "0.1.0",
   "description": "247 - Access Claude Code from anywhere 24/7",
-  "keywords": ["claude", "terminal", "remote", "ai", "cli", "247", "vibecompany"],
+  "keywords": [
+    "claude",
+    "terminal",
+    "remote",
+    "ai",
+    "cli",
+    "247",
+    "vibecompany"
+  ],
   "license": "MIT",
   "author": "The Vibe Company",
   "repository": {
@@ -18,8 +26,14 @@
   "engines": {
     "node": ">=22.0.0"
   },
-  "os": ["darwin", "linux"],
-  "cpu": ["x64", "arm64"],
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
   "bin": {
     "247": "./dist/index.js"
   },
@@ -34,6 +48,9 @@
     "build": "tsc",
     "bundle": "bash scripts/bundle.sh",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "prepublishOnly": "pnpm build && pnpm bundle"
   },
   "dependencies": {
@@ -42,7 +59,6 @@
     "ora": "^8.0.0",
     "enquirer": "^2.4.0",
     "fs-extra": "^11.2.0",
-    "semver": "^7.6.0",
     "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
     "better-sqlite3": "^12.5.0",
     "express": "^4.21.0",
@@ -55,6 +71,7 @@
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.10.5",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.16"
   }
 }

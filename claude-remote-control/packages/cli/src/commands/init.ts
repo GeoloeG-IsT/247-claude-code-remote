@@ -4,8 +4,14 @@ import ora from 'ora';
 import enquirer from 'enquirer';
 import { hostname } from 'os';
 import { checkAllPrerequisites, allRequiredMet } from '../lib/prerequisites.js';
-import { createConfig, saveConfig, configExists, loadConfig, getProfilePath } from '../lib/config.js';
-import { getAgentPaths, ensureDirectories } from '../lib/paths.js';
+import {
+  createConfig,
+  saveConfig,
+  configExists,
+  loadConfig,
+  getProfilePath,
+} from '../lib/config.js';
+import { ensureDirectories } from '../lib/paths.js';
 import { installHooks } from '../hooks/installer.js';
 
 export const initCommand = new Command('init')
@@ -18,7 +24,6 @@ export const initCommand = new Command('init')
   .action(async (options, cmd) => {
     // Get profile from command option or parent (global) option
     const profileName = options.profile || cmd.parent?.opts().profile;
-    const isProfileInit = !!profileName;
     const profileLabel = profileName ? ` (profile: ${profileName})` : '';
 
     console.log(`
@@ -47,9 +52,12 @@ export const initCommand = new Command('init')
 
     console.log(chalk.dim('Prerequisites:'));
     for (const check of checks) {
-      const icon = check.status === 'ok' ? chalk.green('✓') :
-                   check.status === 'warn' ? chalk.yellow('!') :
-                   chalk.red('✗');
+      const icon =
+        check.status === 'ok'
+          ? chalk.green('✓')
+          : check.status === 'warn'
+            ? chalk.yellow('!')
+            : chalk.red('✗');
       console.log(`  ${icon} ${check.name}: ${check.message}`);
     }
     console.log();
@@ -125,11 +133,19 @@ export const initCommand = new Command('init')
 
     console.log('Next steps:');
     if (profileName) {
-      console.log(chalk.cyan(`  247 start --profile ${profileName}`) + chalk.dim('   # Start the agent with this profile'));
-      console.log(chalk.cyan(`  247 profile show ${profileName}`) + chalk.dim('     # View profile configuration'));
+      console.log(
+        chalk.cyan(`  247 start --profile ${profileName}`) +
+          chalk.dim('   # Start the agent with this profile')
+      );
+      console.log(
+        chalk.cyan(`  247 profile show ${profileName}`) +
+          chalk.dim('     # View profile configuration')
+      );
     } else {
       console.log(chalk.cyan('  247 start                   ') + chalk.dim('# Start the agent'));
-      console.log(chalk.cyan('  247 service install --start ') + chalk.dim('# Install as system service'));
+      console.log(
+        chalk.cyan('  247 service install --start ') + chalk.dim('# Install as system service')
+      );
     }
     console.log();
   });

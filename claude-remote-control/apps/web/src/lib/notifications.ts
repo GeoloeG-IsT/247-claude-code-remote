@@ -1,12 +1,20 @@
-import type { SessionStatus, AttentionReason } from '@vibecompany/247-shared';
+import type {
+  SessionStatus,
+  AttentionReason,
+  EnvironmentProvider,
+  EnvironmentIcon,
+  StatusSource,
+} from '@vibecompany/247-shared';
 
+// Local extension of WSSessionInfo for web app use
+// Mirrors the structure from @vibecompany/247-shared but with optional statusSource
 export interface SessionInfo {
   name: string;
   project: string;
   createdAt: number;
   status: SessionStatus;
   attentionReason?: AttentionReason;
-  statusSource?: 'hook' | 'tmux';
+  statusSource?: StatusSource;
   lastActivity?: string;
   lastEvent?: string;
   lastStatusChange?: number;
@@ -16,8 +24,8 @@ export interface SessionInfo {
   environment?: {
     id: string;
     name: string;
-    provider: 'anthropic' | 'openrouter';
-    icon: string | null;
+    provider: EnvironmentProvider;
+    icon: EnvironmentIcon | null;
     isDefault: boolean;
   };
 }
@@ -45,7 +53,11 @@ export function showSessionNotification(
   machineName: string,
   session: SessionInfo
 ): void {
-  console.log('[Notifications] showSessionNotification called:', { machineId, machineName, session });
+  console.log('[Notifications] showSessionNotification called:', {
+    machineId,
+    machineName,
+    session,
+  });
 
   if (typeof window === 'undefined' || !('Notification' in window)) {
     console.log('[Notifications] Notification API not available');

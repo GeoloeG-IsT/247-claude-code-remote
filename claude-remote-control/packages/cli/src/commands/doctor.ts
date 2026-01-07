@@ -1,8 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { existsSync } from 'fs';
-import { join } from 'path';
-import { homedir } from 'os';
 import { checkNode, checkTmux, checkNativeDeps } from '../lib/prerequisites.js';
 import { configExists, loadConfig } from '../lib/config.js';
 import { isAgentRunning, getAgentHealth } from '../lib/process.js';
@@ -52,9 +50,13 @@ export const doctorCommand = new Command('doctor')
     const nativeCheck = await checkNativeDeps();
     results.push({
       name: 'Native modules',
-      status: nativeCheck.status === 'ok' ? 'pass' : nativeCheck.status === 'warn' ? 'warn' : 'fail',
+      status:
+        nativeCheck.status === 'ok' ? 'pass' : nativeCheck.status === 'warn' ? 'warn' : 'fail',
       message: nativeCheck.message,
-      hint: nativeCheck.status === 'error' ? 'Try reinstalling: npm install -g @vibecompany/247' : undefined,
+      hint:
+        nativeCheck.status === 'error'
+          ? 'Try reinstalling: npm install -g @vibecompany/247'
+          : undefined,
     });
 
     // 4. Check configuration
@@ -89,7 +91,9 @@ export const doctorCommand = new Command('doctor')
       results.push({
         name: 'Claude Code hooks',
         status: hooksStatus.needsUpdate ? 'warn' : 'pass',
-        message: hooksStatus.needsUpdate ? 'Installed (update available)' : 'Installed and up to date',
+        message: hooksStatus.needsUpdate
+          ? 'Installed (update available)'
+          : 'Installed and up to date',
         hint: hooksStatus.needsUpdate ? 'Run "247 hooks update" to update' : undefined,
       });
     } else {
@@ -279,7 +283,9 @@ export const doctorCommand = new Command('doctor')
     // Summary
     console.log();
     console.log(chalk.bold('Summary:'));
-    console.log(`  ${chalk.green(passCount + ' passed')}, ${chalk.yellow(warnCount + ' warnings')}, ${chalk.red(failCount + ' failures')}`);
+    console.log(
+      `  ${chalk.green(passCount + ' passed')}, ${chalk.yellow(warnCount + ' warnings')}, ${chalk.red(failCount + ' failures')}`
+    );
 
     if (failCount > 0) {
       console.log();
@@ -287,7 +293,9 @@ export const doctorCommand = new Command('doctor')
       process.exit(1);
     } else if (warnCount > 0) {
       console.log();
-      console.log(chalk.yellow('Some warnings detected. Consider resolving them for best experience.'));
+      console.log(
+        chalk.yellow('Some warnings detected. Consider resolving them for best experience.')
+      );
     } else {
       console.log();
       console.log(chalk.green('All checks passed! 247 is ready to use.'));
