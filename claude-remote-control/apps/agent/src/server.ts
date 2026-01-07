@@ -44,7 +44,7 @@ import {
   openFileInEditor,
   getChangesSummary,
 } from './git.js';
-import config from '../config.json' with { type: 'json' };
+import { config } from './config.js';
 import type { WSMessageToAgent, AgentConfig, WSSessionInfo, WSStatusMessageFromAgent } from '@vibecompany/247-shared';
 
 import type { SessionStatus, AttentionReason } from '@vibecompany/247-shared';

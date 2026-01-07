@@ -1,5 +1,5 @@
 import { createServer } from './server.js';
-import config from '../config.json' with { type: 'json' };
+import { config } from './config.js';
 
 const PORT = config.agent?.port || 4678;
 

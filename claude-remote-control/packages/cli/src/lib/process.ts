@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync, unlinkSync, openSync } from 'f
 import { spawn } from 'child_process';
 import { join } from 'path';
 import { getAgentPaths, ensureDirectories } from './paths.js';
-import { loadConfig, getProfilePath } from './config.js';
+import { loadConfig } from './config.js';
 
 /**
  * Check if the agent process is running
@@ -46,7 +46,6 @@ export function isAgentRunning(): { running: boolean; pid?: number } {
  */
 export async function startAgentDaemon(profileName?: string | null): Promise<{ success: boolean; pid?: number; error?: string }> {
   const paths = getAgentPaths();
-  const configPath = getProfilePath(profileName);
   const config = loadConfig(profileName);
 
   if (!config) {
@@ -101,7 +100,6 @@ export async function startAgentDaemon(profileName?: string | null): Promise<{ s
     stdio: ['ignore', stdout, stderr],
     env: {
       ...process.env,
-      AGENT_247_CONFIG: configPath,
       AGENT_247_DATA: paths.dataDir,
       AGENT_247_PROFILE: profileName || '',
     },
