@@ -86,6 +86,21 @@ export function useTerminalConnection({
     }
   }, []);
 
+  // Send input to terminal (for virtual keyboard)
+  const sendInput = useCallback((data: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      lastActivityRef.current = Date.now();
+      wsRef.current.send(JSON.stringify({ type: 'input', data }));
+    }
+  }, []);
+
+  // Scroll terminal programmatically (for mobile scroll buttons)
+  const scrollTerminal = useCallback((direction: 'up' | 'down', lines: number = 10) => {
+    if (xtermRef.current) {
+      xtermRef.current.scrollLines(direction === 'up' ? -lines : lines);
+    }
+  }, []);
+
   useEffect(() => {
     if (!terminalRef.current) return;
 
@@ -95,6 +110,8 @@ export function useTerminalConnection({
     let handleResize: (() => void) | null = null;
     let handleMouseUp: (() => void) | null = null;
     let handlePaste: ((e: ClipboardEvent) => void) | null = null;
+    let handleTouchStart: ((e: TouchEvent) => void) | null = null;
+    let handleTouchMove: ((e: TouchEvent) => void) | null = null;
     let termElement: HTMLElement | null = null;
     let resizeObserver: ResizeObserver | null = null;
     let viewportQueries: MediaQueryList[] = [];
@@ -200,6 +217,34 @@ export function useTerminalConnection({
         const buffer = term.buffer.active;
         setIsAtBottom(buffer.viewportY >= buffer.baseY);
       });
+
+      // Touch scroll handler for mobile - xterm.js canvas doesn't support native touch scroll
+      if (isMobile && term.element) {
+        let touchStartY = 0;
+        let touchStartX = 0;
+        const currentTermForTouch = term; // Capture for closure
+
+        handleTouchStart = (e: TouchEvent) => {
+          touchStartY = e.touches[0].clientY;
+          touchStartX = e.touches[0].clientX;
+        };
+
+        handleTouchMove = (e: TouchEvent) => {
+          const deltaY = touchStartY - e.touches[0].clientY;
+          const deltaX = Math.abs(touchStartX - e.touches[0].clientX);
+
+          // Only scroll if vertical movement > horizontal (not horizontal swipe)
+          if (Math.abs(deltaY) > deltaX && Math.abs(deltaY) > 10) {
+            e.preventDefault();
+            const lines = Math.round(deltaY / 20); // ~20px per line
+            currentTermForTouch.scrollLines(lines);
+            touchStartY = e.touches[0].clientY;
+          }
+        };
+
+        term.element.addEventListener('touchstart', handleTouchStart, { passive: true });
+        term.element.addEventListener('touchmove', handleTouchMove, { passive: false });
+      }
 
       // WebSocket connection
       let wsUrl = buildWebSocketUrl(
@@ -502,6 +547,13 @@ export function useTerminalConnection({
       }
       if (handleMouseUp) window.removeEventListener('mouseup', handleMouseUp);
       if (handlePaste && termElement) termElement.removeEventListener('paste', handlePaste);
+      // Clean up touch scroll listeners
+      if (termElement && handleTouchStart) {
+        termElement.removeEventListener('touchstart', handleTouchStart);
+      }
+      if (termElement && handleTouchMove) {
+        termElement.removeEventListener('touchmove', handleTouchMove);
+      }
       if (resizeObserver) {
         resizeObserver.disconnect();
         resizeObserver = null;
@@ -593,5 +645,7 @@ export function useTerminalConnection({
     scrollToBottom,
     copySelection,
     startClaude,
+    sendInput,
+    scrollTerminal,
   };
 }

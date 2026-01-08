@@ -7,6 +7,7 @@ import { generateSessionName } from './constants';
 import { Toolbar } from './Toolbar';
 import { SearchBar } from './SearchBar';
 import { ScrollToBottomButton } from './ScrollToBottomButton';
+import { MobileKeybar } from './MobileKeybar';
 import { useTerminalConnection, useTerminalSearch } from './hooks';
 
 interface TerminalProps {
@@ -57,6 +58,8 @@ export function Terminal({
     scrollToBottom,
     copySelection,
     startClaude,
+    sendInput,
+    scrollTerminal,
   } = useTerminalConnection({
     terminalRef,
     agentUrl,
@@ -116,6 +119,9 @@ export function Terminal({
       <div ref={terminalRef} className="min-h-0 w-full flex-1 overflow-hidden bg-[#0a0a10]" />
 
       <ScrollToBottomButton visible={!isAtBottom} onClick={scrollToBottom} />
+
+      {/* Mobile virtual keyboard with arrow keys and action buttons */}
+      {isMobile && <MobileKeybar onKeyPress={sendInput} onScroll={scrollTerminal} />}
     </div>
   );
 }
