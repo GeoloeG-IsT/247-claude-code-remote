@@ -4,7 +4,7 @@
  * Tests for utility functions used across the application.
  */
 import { describe, it, expect } from 'vitest';
-import { cn, stripProtocol, buildWebSocketUrl } from '@/lib/utils';
+import { cn, stripProtocol, buildWebSocketUrl, buildApiUrl } from '@/lib/utils';
 
 describe('Utils', () => {
   describe('cn function', () => {
@@ -169,6 +169,69 @@ describe('Utils', () => {
       expect(buildWebSocketUrl('https://example.com:4678', '/api/v1/websocket')).toBe(
         'wss://example.com:4678/api/v1/websocket'
       );
+    });
+  });
+
+  describe('buildApiUrl', () => {
+    it('builds http:// URL for localhost', () => {
+      expect(buildApiUrl('localhost:4678', '/api/sessions')).toBe(
+        'http://localhost:4678/api/sessions'
+      );
+    });
+
+    it('builds http:// URL for 127.0.0.1', () => {
+      expect(buildApiUrl('127.0.0.1:4678', '/api/sessions')).toBe(
+        'http://127.0.0.1:4678/api/sessions'
+      );
+    });
+
+    it('builds https:// URL for non-localhost domains', () => {
+      expect(buildApiUrl('example.com:4678', '/api/sessions')).toBe(
+        'https://example.com:4678/api/sessions'
+      );
+    });
+
+    it('strips existing https:// protocol before building URL', () => {
+      expect(buildApiUrl('https://example.com:4678', '/api/sessions')).toBe(
+        'https://example.com:4678/api/sessions'
+      );
+    });
+
+    it('strips existing http:// protocol before building URL', () => {
+      expect(buildApiUrl('http://localhost:4678', '/api/sessions')).toBe(
+        'http://localhost:4678/api/sessions'
+      );
+    });
+
+    it('handles Tailscale URLs with protocol', () => {
+      expect(buildApiUrl('https://macbook-pro.tail5f910b.ts.net:4678', '/api/sessions')).toBe(
+        'https://macbook-pro.tail5f910b.ts.net:4678/api/sessions'
+      );
+    });
+
+    it('handles Tailscale URLs without protocol', () => {
+      expect(buildApiUrl('macbook-pro.tail5f910b.ts.net:4678', '/api/sessions')).toBe(
+        'https://macbook-pro.tail5f910b.ts.net:4678/api/sessions'
+      );
+    });
+
+    it('handles paths with query parameters', () => {
+      expect(buildApiUrl('localhost:4678', '/api/clone/preview?url=test')).toBe(
+        'http://localhost:4678/api/clone/preview?url=test'
+      );
+    });
+
+    it('handles complex paths', () => {
+      expect(buildApiUrl('https://example.com:4678', '/api/sessions/test/archive')).toBe(
+        'https://example.com:4678/api/sessions/test/archive'
+      );
+    });
+
+    it('handles URL with double protocol correctly', () => {
+      // This is the key bug fix - URLs with existing protocol should not double up
+      expect(
+        buildApiUrl('https://macbook-pro.tail5f910b.ts.net:4678', '/api/sessions/archived')
+      ).toBe('https://macbook-pro.tail5f910b.ts.net:4678/api/sessions/archived');
     });
   });
 });

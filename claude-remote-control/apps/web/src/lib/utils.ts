@@ -23,3 +23,14 @@ export function buildWebSocketUrl(agentUrl: string, path: string): string {
   const wsProtocol = isLocalhost ? 'ws' : 'wss';
   return `${wsProtocol}://${cleanUrl}${path}`;
 }
+
+/**
+ * Build an HTTP API URL from an agent URL
+ * Handles both URLs with and without protocol
+ */
+export function buildApiUrl(agentUrl: string, path: string): string {
+  const cleanUrl = stripProtocol(agentUrl);
+  const isLocalhost = cleanUrl.includes('localhost') || cleanUrl.startsWith('127.0.0.1');
+  const protocol = isLocalhost ? 'http' : 'https';
+  return `${protocol}://${cleanUrl}${path}`;
+}

@@ -18,7 +18,7 @@ import { SessionCard } from './SessionCard';
 import { SessionPreviewPopover } from './SessionPreviewPopover';
 import { type SessionWithMachine } from '@/contexts/SessionPollingContext';
 import { type SessionInfo } from '@/lib/notifications';
-import { cn } from '@/lib/utils';
+import { cn, buildApiUrl } from '@/lib/utils';
 
 interface SelectedSession {
   machineId: string;
@@ -66,11 +66,9 @@ export function HomeSidebar({
   // Kill session handler
   const handleKillSession = useCallback(
     async (session: SessionWithMachine) => {
-      const protocol = session.agentUrl.includes('localhost') ? 'http' : 'https';
-
       try {
         const response = await fetch(
-          `${protocol}://${session.agentUrl}/api/sessions/${encodeURIComponent(session.name)}`,
+          buildApiUrl(session.agentUrl, `/api/sessions/${encodeURIComponent(session.name)}`),
           { method: 'DELETE' }
         );
 
@@ -94,11 +92,12 @@ export function HomeSidebar({
   // Archive session handler
   const handleArchiveSession = useCallback(
     async (session: SessionWithMachine) => {
-      const protocol = session.agentUrl.includes('localhost') ? 'http' : 'https';
-
       try {
         const response = await fetch(
-          `${protocol}://${session.agentUrl}/api/sessions/${encodeURIComponent(session.name)}/archive`,
+          buildApiUrl(
+            session.agentUrl,
+            `/api/sessions/${encodeURIComponent(session.name)}/archive`
+          ),
           { method: 'POST' }
         );
 

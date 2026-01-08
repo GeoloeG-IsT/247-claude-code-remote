@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Trash2, Zap, Globe, Eye, EyeOff, AlertCircle, Star } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, buildApiUrl } from '@/lib/utils';
 import type {
   EnvironmentProvider,
   Environment,
@@ -69,9 +69,8 @@ export function EnvironmentFormModal({
       // Load full environment data for editing
       const loadEnvironment = async () => {
         try {
-          const protocol = agentUrl.includes('localhost') ? 'http' : 'https';
           const response = await fetch(
-            `${protocol}://${agentUrl}/api/environments/${editingEnvironment.id}/full`
+            buildApiUrl(agentUrl, `/api/environments/${editingEnvironment.id}/full`)
           );
           if (response.ok) {
             const env: Environment = await response.json();
@@ -162,10 +161,9 @@ export function EnvironmentFormModal({
     });
 
     try {
-      const protocol = agentUrl.includes('localhost') ? 'http' : 'https';
       const url = editingEnvironment
-        ? `${protocol}://${agentUrl}/api/environments/${editingEnvironment.id}`
-        : `${protocol}://${agentUrl}/api/environments`;
+        ? buildApiUrl(agentUrl, `/api/environments/${editingEnvironment.id}`)
+        : buildApiUrl(agentUrl, '/api/environments');
 
       const response = await fetch(url, {
         method: editingEnvironment ? 'PUT' : 'POST',

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { buildApiUrl } from '@/lib/utils';
 
 interface Machine {
   id: string;
@@ -43,9 +44,8 @@ export function useClone(selectedMachine: Machine | null): UseCloneResult {
     const previewName = async () => {
       try {
         const agentUrl = selectedMachine.config?.agentUrl || 'localhost:4678';
-        const protocol = agentUrl.includes('localhost') ? 'http' : 'https';
         const response = await fetch(
-          `${protocol}://${agentUrl}/api/clone/preview?url=${encodeURIComponent(repoUrl)}`
+          buildApiUrl(agentUrl, `/api/clone/preview?url=${encodeURIComponent(repoUrl)}`)
         );
         if (response.ok) {
           const data = await response.json();
@@ -70,9 +70,8 @@ export function useClone(selectedMachine: Machine | null): UseCloneResult {
 
     try {
       const agentUrl = selectedMachine.config?.agentUrl || 'localhost:4678';
-      const protocol = agentUrl.includes('localhost') ? 'http' : 'https';
 
-      const response = await fetch(`${protocol}://${agentUrl}/api/clone`, {
+      const response = await fetch(buildApiUrl(agentUrl, '/api/clone'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

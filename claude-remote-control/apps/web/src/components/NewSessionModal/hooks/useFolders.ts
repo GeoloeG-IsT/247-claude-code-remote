@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { buildApiUrl } from '@/lib/utils';
 
 interface Machine {
   id: string;
@@ -28,8 +29,7 @@ export function useFolders(selectedMachine: Machine | null) {
       setLoadingFolders(true);
       try {
         const agentUrl = selectedMachine.config?.agentUrl || 'localhost:4678';
-        const protocol = agentUrl.includes('localhost') ? 'http' : 'https';
-        const response = await fetch(`${protocol}://${agentUrl}/api/folders`);
+        const response = await fetch(buildApiUrl(agentUrl, '/api/folders'));
         if (response.ok) {
           const folderList: string[] = await response.json();
           setFolders(folderList);

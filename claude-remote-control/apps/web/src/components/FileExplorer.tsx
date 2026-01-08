@@ -19,7 +19,7 @@ import {
   FileSpreadsheet,
   Settings,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, buildApiUrl } from '@/lib/utils';
 
 type GitFileStatus = 'modified' | 'added' | 'deleted' | 'untracked' | 'unchanged' | 'conflicted';
 
@@ -63,9 +63,8 @@ export function FileExplorer({ agentUrl, project }: FileExplorerProps) {
   // Fetch files
   const fetchFiles = useCallback(async () => {
     try {
-      const protocol = agentUrl.includes('localhost') ? 'http' : 'https';
       const response = await fetch(
-        `${protocol}://${agentUrl}/api/files/${encodeURIComponent(project)}`
+        buildApiUrl(agentUrl, `/api/files/${encodeURIComponent(project)}`)
       );
 
       if (!response.ok) {
@@ -109,9 +108,11 @@ export function FileExplorer({ agentUrl, project }: FileExplorerProps) {
       setFileContent(null);
 
       try {
-        const protocol = agentUrl.includes('localhost') ? 'http' : 'https';
         const response = await fetch(
-          `${protocol}://${agentUrl}/api/files/${encodeURIComponent(project)}/content?path=${encodeURIComponent(file.path)}`
+          buildApiUrl(
+            agentUrl,
+            `/api/files/${encodeURIComponent(project)}/content?path=${encodeURIComponent(file.path)}`
+          )
         );
 
         if (!response.ok) {
@@ -134,9 +135,8 @@ export function FileExplorer({ agentUrl, project }: FileExplorerProps) {
     if (!selectedFile) return;
 
     try {
-      const protocol = agentUrl.includes('localhost') ? 'http' : 'https';
       const response = await fetch(
-        `${protocol}://${agentUrl}/api/files/${encodeURIComponent(project)}/open`,
+        buildApiUrl(agentUrl, `/api/files/${encodeURIComponent(project)}/open`),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

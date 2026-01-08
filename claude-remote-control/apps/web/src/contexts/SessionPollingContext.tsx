@@ -14,7 +14,7 @@ import {
   requestNotificationPermission,
   showSessionNotification,
 } from '@/lib/notifications';
-import { buildWebSocketUrl } from '@/lib/utils';
+import { buildWebSocketUrl, buildApiUrl } from '@/lib/utils';
 import type { WSStatusMessageFromAgent } from '@vibecompany/247-shared';
 
 export interface Machine {
@@ -108,7 +108,6 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
   const fetchSessionsForMachine = useCallback(
     async (machine: Machine): Promise<MachineSessionData> => {
       const agentUrl = machine.config?.agentUrl || 'localhost:4678';
-      const protocol = agentUrl.includes('localhost') ? 'http' : 'https';
 
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
@@ -117,7 +116,7 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
       const isWsConnected = wsConnectedRef.current.has(machine.id);
 
       try {
-        const response = await fetch(`${protocol}://${agentUrl}/api/sessions`, {
+        const response = await fetch(buildApiUrl(agentUrl, '/api/sessions'), {
           signal: controller.signal,
         });
 
@@ -288,10 +287,9 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
   // Fetch archived sessions for a machine
   const fetchArchivedSessions = useCallback(async (machine: Machine): Promise<void> => {
     const agentUrl = machine.config?.agentUrl || 'localhost:4678';
-    const protocol = agentUrl.includes('localhost') ? 'http' : 'https';
 
     try {
-      const response = await fetch(`${protocol}://${agentUrl}/api/sessions/archived`);
+      const response = await fetch(buildApiUrl(agentUrl, '/api/sessions/archived'));
       if (!response.ok) return;
 
       const sessions: SessionInfo[] = await response.json();

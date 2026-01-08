@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, buildApiUrl } from '@/lib/utils';
 import type { EditorStatus } from '@vibecompany/247-shared';
 
 interface EditorProps {
@@ -27,16 +27,14 @@ export function Editor({ agentUrl, project, onStatusChange }: EditorProps) {
       return `http://127.0.0.1:${status.port}/`;
     }
     // Fallback to proxy (for remote access via tunnel)
-    const protocol = agentUrl.includes('localhost') ? 'http' : 'https';
-    return `${protocol}://${agentUrl}/editor/${encodeURIComponent(project)}/`;
+    return buildApiUrl(agentUrl, `/editor/${encodeURIComponent(project)}/`);
   }, [agentUrl, project, status?.port]);
 
   // Fetch editor status
   const fetchStatus = useCallback(async () => {
     try {
-      const protocol = agentUrl.includes('localhost') ? 'http' : 'https';
       const response = await fetch(
-        `${protocol}://${agentUrl}/api/editor/${encodeURIComponent(project)}/status`
+        buildApiUrl(agentUrl, `/api/editor/${encodeURIComponent(project)}/status`)
       );
 
       if (!response.ok) {
@@ -62,9 +60,8 @@ export function Editor({ agentUrl, project, onStatusChange }: EditorProps) {
     setError(null);
 
     try {
-      const protocol = agentUrl.includes('localhost') ? 'http' : 'https';
       const response = await fetch(
-        `${protocol}://${agentUrl}/api/editor/${encodeURIComponent(project)}/start`,
+        buildApiUrl(agentUrl, `/api/editor/${encodeURIComponent(project)}/start`),
         { method: 'POST' }
       );
 
@@ -74,7 +71,7 @@ export function Editor({ agentUrl, project, onStatusChange }: EditorProps) {
       }
 
       // Wait a bit for code-server to be ready
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Fetch updated status
       await fetchStatus();
@@ -100,9 +97,9 @@ export function Editor({ agentUrl, project, onStatusChange }: EditorProps) {
   // Loading state
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center flex-1 bg-[#0a0a10] gap-4">
-        <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-        <span className="text-white/60 text-sm">Checking editor status...</span>
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-[#0a0a10]">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+        <span className="text-sm text-white/60">Checking editor status...</span>
       </div>
     );
   }
@@ -110,10 +107,10 @@ export function Editor({ agentUrl, project, onStatusChange }: EditorProps) {
   // Starting state
   if (starting || (status && !status.running)) {
     return (
-      <div className="flex flex-col items-center justify-center flex-1 bg-[#0a0a10] gap-4">
-        <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-        <span className="text-white/60 text-sm">Starting VS Code...</span>
-        <span className="text-white/40 text-xs">This may take a few seconds</span>
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-[#0a0a10]">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+        <span className="text-sm text-white/60">Starting VS Code...</span>
+        <span className="text-xs text-white/40">This may take a few seconds</span>
       </div>
     );
   }
@@ -121,12 +118,12 @@ export function Editor({ agentUrl, project, onStatusChange }: EditorProps) {
   // Error state
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center flex-1 bg-[#0a0a10] gap-4 p-8">
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-[#0a0a10] p-8">
         <div className="flex items-center gap-2 text-red-400">
-          <AlertCircle className="w-6 h-6" />
+          <AlertCircle className="h-6 w-6" />
           <span className="font-medium">Failed to load editor</span>
         </div>
-        <p className="text-white/40 text-sm text-center max-w-md">{error}</p>
+        <p className="max-w-md text-center text-sm text-white/40">{error}</p>
         <button
           onClick={() => {
             setError(null);
@@ -134,12 +131,12 @@ export function Editor({ agentUrl, project, onStatusChange }: EditorProps) {
             fetchStatus();
           }}
           className={cn(
-            'flex items-center gap-2 px-4 py-2 rounded-lg',
-            'bg-white/10 hover:bg-white/15 text-white/80 hover:text-white',
+            'flex items-center gap-2 rounded-lg px-4 py-2',
+            'bg-white/10 text-white/80 hover:bg-white/15 hover:text-white',
             'transition-colors'
           )}
         >
-          <RefreshCw className="w-4 h-4" />
+          <RefreshCw className="h-4 w-4" />
           <span>Retry</span>
         </button>
       </div>
@@ -148,7 +145,7 @@ export function Editor({ agentUrl, project, onStatusChange }: EditorProps) {
 
   // Editor iframe
   return (
-    <div className="flex flex-col flex-1 overflow-hidden">
+    <div className="flex flex-1 flex-col overflow-hidden">
       {/* Toolbar */}
       <div
         className={cn(
@@ -166,7 +163,7 @@ export function Editor({ agentUrl, project, onStatusChange }: EditorProps) {
         <div className="flex-1" />
 
         <div className="flex items-center gap-2 text-xs text-white/40">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
           <span>Running on port {status?.port}</span>
         </div>
       </div>
@@ -174,7 +171,7 @@ export function Editor({ agentUrl, project, onStatusChange }: EditorProps) {
       {/* VS Code iframe */}
       <iframe
         src={buildEditorUrl()}
-        className="flex-1 w-full border-0 bg-[#1e1e1e]"
+        className="w-full flex-1 border-0 bg-[#1e1e1e]"
         title={`VS Code - ${project}`}
         allow="clipboard-read; clipboard-write"
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Terminal as TerminalIcon, Zap, Clock, ArrowRight, RefreshCw } from 'lucide-react';
 import { type SessionInfo } from '@/lib/notifications';
 import { type SessionStatus, type AttentionReason } from '@vibecompany/247-shared';
-import { cn } from '@/lib/utils';
+import { cn, buildApiUrl } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/time';
 
 interface SessionPreviewPopoverProps {
@@ -68,9 +68,8 @@ export function SessionPreviewPopover({ session, position, agentUrl }: SessionPr
       }
 
       try {
-        const protocol = agentUrl.includes('localhost') ? 'http' : 'https';
         const response = await fetch(
-          `${protocol}://${agentUrl}/api/sessions/${encodeURIComponent(sessionName)}/preview`,
+          buildApiUrl(agentUrl, `/api/sessions/${encodeURIComponent(sessionName)}/preview`),
           {
             signal: controller.signal,
           }

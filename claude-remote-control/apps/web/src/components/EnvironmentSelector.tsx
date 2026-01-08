@@ -3,10 +3,13 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Zap, Globe, Check, Star, Settings } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, buildApiUrl } from '@/lib/utils';
 import type { EnvironmentMetadata, EnvironmentProvider } from '@vibecompany/247-shared';
 
-const providerConfig: Record<EnvironmentProvider, { icon: typeof Zap; label: string; color: string }> = {
+const providerConfig: Record<
+  EnvironmentProvider,
+  { icon: typeof Zap; label: string; color: string }
+> = {
   anthropic: { icon: Zap, label: 'Anthropic', color: 'text-orange-400' },
   openrouter: { icon: Globe, label: 'OpenRouter', color: 'text-emerald-400' },
 };
@@ -33,8 +36,7 @@ export function EnvironmentSelector({
   useEffect(() => {
     const fetchEnvironments = async () => {
       try {
-        const protocol = agentUrl.includes('localhost') ? 'http' : 'https';
-        const response = await fetch(`${protocol}://${agentUrl}/api/environments`);
+        const response = await fetch(buildApiUrl(agentUrl, '/api/environments'));
         if (response.ok) {
           const data: EnvironmentMetadata[] = await response.json();
           setEnvironments(data);
@@ -63,14 +65,17 @@ export function EnvironmentSelector({
   const SelectedIcon = selected ? providerConfig[selected.provider].icon : Zap;
 
   if (loading) {
-    return (
-      <div className={cn('h-12 bg-white/5 rounded-xl animate-pulse', className)} />
-    );
+    return <div className={cn('h-12 animate-pulse rounded-xl bg-white/5', className)} />;
   }
 
   if (environments.length === 0) {
     return (
-      <div className={cn('px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white/40 text-sm', className)}>
+      <div
+        className={cn(
+          'rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/40',
+          className
+        )}
+      >
         No environments configured
       </div>
     );
@@ -81,9 +86,9 @@ export function EnvironmentSelector({
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          'w-full px-4 py-3 rounded-xl text-left',
-          'bg-white/5 border border-white/10',
-          'hover:bg-white/10 hover:border-white/20',
+          'w-full rounded-xl px-4 py-3 text-left',
+          'border border-white/10 bg-white/5',
+          'hover:border-white/20 hover:bg-white/10',
           'flex items-center justify-between',
           'transition-all'
         )}
@@ -91,13 +96,13 @@ export function EnvironmentSelector({
         <div className="flex items-center gap-3">
           <div
             className={cn(
-              'w-8 h-8 rounded-lg flex items-center justify-center',
-              'bg-white/5 border border-white/10'
+              'flex h-8 w-8 items-center justify-center rounded-lg',
+              'border border-white/10 bg-white/5'
             )}
           >
             <SelectedIcon
               className={cn(
-                'w-4 h-4',
+                'h-4 w-4',
                 selected ? providerConfig[selected.provider].color : 'text-white/40'
               )}
             />
@@ -107,14 +112,14 @@ export function EnvironmentSelector({
               {selected?.name || 'Select environment...'}
             </span>
             {selected?.isDefault && (
-              <span className="text-[10px] text-orange-400 flex items-center gap-1">
-                <Star className="w-2.5 h-2.5 fill-current" /> Default
+              <span className="flex items-center gap-1 text-[10px] text-orange-400">
+                <Star className="h-2.5 w-2.5 fill-current" /> Default
               </span>
             )}
           </div>
         </div>
         <ChevronDown
-          className={cn('w-4 h-4 text-white/40 transition-transform', open && 'rotate-180')}
+          className={cn('h-4 w-4 text-white/40 transition-transform', open && 'rotate-180')}
         />
       </button>
 
@@ -126,8 +131,8 @@ export function EnvironmentSelector({
             exit={{ opacity: 0, y: -5 }}
             transition={{ duration: 0.15 }}
             className={cn(
-              'absolute top-full left-0 right-0 mt-2 z-20',
-              'bg-[#12121a] border border-white/10 rounded-xl',
+              'absolute left-0 right-0 top-full z-20 mt-2',
+              'rounded-xl border border-white/10 bg-[#12121a]',
               'shadow-xl shadow-black/50',
               'overflow-hidden'
             )}
@@ -144,37 +149,37 @@ export function EnvironmentSelector({
                       setOpen(false);
                     }}
                     className={cn(
-                      'w-full px-4 py-3 text-left flex items-center gap-3',
-                      'hover:bg-white/5 transition-colors',
+                      'flex w-full items-center gap-3 px-4 py-3 text-left',
+                      'transition-colors hover:bg-white/5',
                       selectedId === env.id && 'bg-white/5'
                     )}
                   >
                     <div
                       className={cn(
-                        'w-8 h-8 rounded-lg flex items-center justify-center',
-                        'bg-white/5 border border-white/10',
+                        'flex h-8 w-8 items-center justify-center rounded-lg',
+                        'border border-white/10 bg-white/5',
                         selectedId === env.id && 'border-orange-500/30'
                       )}
                     >
-                      <Icon className={cn('w-4 h-4', config.color)} />
+                      <Icon className={cn('h-4 w-4', config.color)} />
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span
                           className={cn(
-                            'font-medium truncate',
+                            'truncate font-medium',
                             selectedId === env.id ? 'text-orange-400' : 'text-white/80'
                           )}
                         >
                           {env.name}
                         </span>
                         {env.isDefault && (
-                          <Star className="w-3 h-3 text-orange-400 fill-orange-400 flex-shrink-0" />
+                          <Star className="h-3 w-3 flex-shrink-0 fill-orange-400 text-orange-400" />
                         )}
                       </div>
-                      <div className="text-xs text-white/30 mt-0.5">{config.label}</div>
+                      <div className="mt-0.5 text-xs text-white/30">{config.label}</div>
                     </div>
-                    {selectedId === env.id && <Check className="w-4 h-4 text-orange-400" />}
+                    {selectedId === env.id && <Check className="h-4 w-4 text-orange-400" />}
                   </button>
                 );
               })}
@@ -187,9 +192,9 @@ export function EnvironmentSelector({
                   setOpen(false);
                   onManageClick();
                 }}
-                className="w-full px-4 py-2.5 text-sm text-white/40 hover:text-white hover:bg-white/5 border-t border-white/5 transition-colors flex items-center justify-center gap-2"
+                className="flex w-full items-center justify-center gap-2 border-t border-white/5 px-4 py-2.5 text-sm text-white/40 transition-colors hover:bg-white/5 hover:text-white"
               >
-                <Settings className="w-3.5 h-3.5" />
+                <Settings className="h-3.5 w-3.5" />
                 Manage Environments
               </button>
             )}

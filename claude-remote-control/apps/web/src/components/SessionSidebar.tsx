@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { SessionCard } from './SessionCard';
 import { SessionPreviewPopover } from './SessionPreviewPopover';
 import { type SessionInfo } from '@/lib/notifications';
-import { cn } from '@/lib/utils';
+import { cn, buildApiUrl } from '@/lib/utils';
 
 interface SessionSidebarProps {
   sessions: SessionInfo[];
@@ -42,11 +42,9 @@ export function SessionSidebar({
   // Kill session handler
   const handleKillSession = useCallback(
     async (sessionName: string) => {
-      const protocol = agentUrl.includes('localhost') ? 'http' : 'https';
-
       try {
         const response = await fetch(
-          `${protocol}://${agentUrl}/api/sessions/${encodeURIComponent(sessionName)}`,
+          buildApiUrl(agentUrl, `/api/sessions/${encodeURIComponent(sessionName)}`),
           { method: 'DELETE' }
         );
 
