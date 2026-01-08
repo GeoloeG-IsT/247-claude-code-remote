@@ -5,6 +5,8 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+const TEST_VERSION = '1.2.3';
+
 // Mock chalk
 vi.mock('chalk', () => ({
   default: {
@@ -33,6 +35,11 @@ describe('Version Command', () => {
     vi.resetModules();
     vi.clearAllMocks();
 
+    // Mock package.json import
+    vi.doMock('../../../package.json', () => ({
+      default: { version: TEST_VERSION },
+    }));
+
     // Capture console.log output
     consoleLogs = [];
     originalConsoleLog = console.log;
@@ -51,24 +58,24 @@ describe('Version Command', () => {
   });
 
   it('shows current version with (latest) when up to date', async () => {
-    mockExecAsync.mockResolvedValue({ stdout: '0.6.1\n' });
+    mockExecAsync.mockResolvedValue({ stdout: `${TEST_VERSION}\n` });
 
     const { versionCommand } = await import('../../../src/commands/version.js');
     await versionCommand.parseAsync(['node', 'version']);
 
-    expect(consoleLogs.some((log) => log.includes('247 v0.6.1'))).toBe(true);
+    expect(consoleLogs.some((log) => log.includes(`247 v${TEST_VERSION}`))).toBe(true);
     expect(consoleLogs.some((log) => log.includes('[green](latest)[/green]'))).toBe(true);
   });
 
   it('shows update available when newer version exists', async () => {
-    mockExecAsync.mockResolvedValue({ stdout: '0.7.0\n' });
+    mockExecAsync.mockResolvedValue({ stdout: '9.9.9\n' });
 
     const { versionCommand } = await import('../../../src/commands/version.js');
     await versionCommand.parseAsync(['node', 'version']);
 
-    expect(consoleLogs.some((log) => log.includes('247 v0.6.1'))).toBe(true);
+    expect(consoleLogs.some((log) => log.includes(`247 v${TEST_VERSION}`))).toBe(true);
     expect(consoleLogs.some((log) => log.includes('[yellow]Update available'))).toBe(true);
-    expect(consoleLogs.some((log) => log.includes('0.7.0'))).toBe(true);
+    expect(consoleLogs.some((log) => log.includes('9.9.9'))).toBe(true);
     expect(consoleLogs.some((log) => log.includes('247 update'))).toBe(true);
   });
 
@@ -78,7 +85,7 @@ describe('Version Command', () => {
     const { versionCommand } = await import('../../../src/commands/version.js');
     await versionCommand.parseAsync(['node', 'version']);
 
-    expect(consoleLogs.some((log) => log.includes('247 v0.6.1'))).toBe(true);
+    expect(consoleLogs.some((log) => log.includes(`247 v${TEST_VERSION}`))).toBe(true);
     expect(consoleLogs.some((log) => log.includes('Could not check for updates'))).toBe(true);
   });
 });
