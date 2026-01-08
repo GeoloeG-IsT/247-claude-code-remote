@@ -33,14 +33,30 @@ export function MobileSidebarDrawer({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  // Prevent body scroll when drawer is open
+  // Prevent body scroll when drawer is open (preserves scroll position)
   useEffect(() => {
     if (isOpen) {
+      // Store current scroll position
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
     } else {
+      // Restore scroll position
+      const scrollY = document.body.style.top;
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
       document.body.style.overflow = '';
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
     }
     return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
       document.body.style.overflow = '';
     };
   }, [isOpen]);
@@ -75,7 +91,9 @@ export function MobileSidebarDrawer({
               // Safe area padding for iOS
               'pt-[env(safe-area-inset-top)]',
               'pb-[env(safe-area-inset-bottom)]',
-              'pl-[env(safe-area-inset-left)]'
+              'pl-[env(safe-area-inset-left)]',
+              // Prevent scroll chaining to page behind
+              'overscroll-contain'
             )}
             role="dialog"
             aria-modal="true"
@@ -99,7 +117,9 @@ export function MobileSidebarDrawer({
             </div>
 
             {/* Drawer Content */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden">{children}</div>
+            <div className="scroll-touch flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
+              {children}
+            </div>
           </motion.div>
         </>
       )}

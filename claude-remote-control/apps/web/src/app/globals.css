@@ -10,6 +10,10 @@
   :root {
     --background: 240 10% 4%;
     --foreground: 0 0% 98%;
+
+    /* Mobile viewport height - uses dvh with vh fallback */
+    --app-height: 100vh;
+    --app-height: 100dvh;
     --card: 240 10% 6%;
     --card-foreground: 0 0% 98%;
     --popover: 240 10% 6%;
@@ -43,9 +47,22 @@
     @apply border-border;
   }
 
+  html, body {
+    /* Prevent overscroll bounce on iOS */
+    overscroll-behavior: none;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Prevent body scroll when modal/drawer is open */
+  body.drawer-open {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    touch-action: none;
   }
 
   /* Custom scrollbar */
@@ -207,6 +224,41 @@
   .animate-slide-in-left {
     animation: slide-in-left 0.2s ease-out forwards;
   }
+
+  /* Mobile viewport height - adapts to virtual keyboard */
+  .h-screen-safe {
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  .min-h-screen-safe {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  /* Fallback using JS-set CSS variable */
+  .h-app {
+    height: var(--app-height, 100vh);
+  }
+
+  /* Prevent scroll chaining */
+  .overscroll-contain {
+    overscroll-behavior: contain;
+  }
+
+  /* iOS momentum scrolling */
+  .scroll-touch {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Focus visible styles */
@@ -224,5 +276,13 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Mobile-specific fixes */
+@media (max-width: 768px) {
+  /* Prevent zoom on input focus on iOS - requires 16px minimum */
+  input, select, textarea {
+    font-size: 16px !important;
   }
 }

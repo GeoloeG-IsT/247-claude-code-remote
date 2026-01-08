@@ -380,8 +380,8 @@ export function HomeSidebar({
           className={cn(
             'flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-1',
             'scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent',
-            // Mobile: add spacing for touch
-            isMobileDrawer && 'space-y-2 px-3'
+            // Mobile: add spacing for touch and prevent scroll chaining
+            isMobileDrawer && 'scroll-touch space-y-2 overscroll-contain px-3'
           )}
         >
           <AnimatePresence mode="popLayout">

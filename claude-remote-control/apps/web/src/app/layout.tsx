@@ -24,6 +24,8 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
+  // Android: resize content when virtual keyboard appears (instead of panning)
+  interactiveWidget: 'resizes-content',
 };
 
 export const metadata: Metadata = {

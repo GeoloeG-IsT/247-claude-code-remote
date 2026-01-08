@@ -13,10 +13,14 @@ import { NoConnectionView } from './NoConnectionView';
 import { Header } from './Header';
 import { useHomeState } from './useHomeState';
 import { useIsMobile } from '@/hooks/useMediaQuery';
+import { useViewportHeight } from '@/hooks/useViewportHeight';
 
 export function HomeContent() {
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Set CSS variable for viewport height (handles mobile keyboard)
+  useViewportHeight();
 
   const {
     loading,
@@ -62,7 +66,7 @@ export function HomeContent() {
 
   // Connected state - Split View Layout
   return (
-    <main className="flex h-screen flex-col overflow-hidden bg-[#0a0a10]">
+    <main className="h-screen-safe flex flex-col overflow-hidden bg-[#0a0a10]">
       <Header
         agentUrl={agentConnection.url}
         sessionCount={allSessions.length}
