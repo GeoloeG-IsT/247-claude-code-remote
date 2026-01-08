@@ -12,6 +12,8 @@ import {
   Keyboard,
   X,
   Archive,
+  Download,
+  Share,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { SessionCard } from './SessionCard';
@@ -19,6 +21,7 @@ import { SessionPreviewPopover } from './SessionPreviewPopover';
 import { type SessionWithMachine } from '@/contexts/SessionPollingContext';
 import { type SessionInfo } from '@/lib/notifications';
 import { cn, buildApiUrl } from '@/lib/utils';
+import { useInstallPrompt } from '@/hooks/useInstallPrompt';
 
 interface SelectedSession {
   machineId: string;
@@ -56,6 +59,9 @@ export function HomeSidebar({
   // Don't allow collapse in mobile drawer mode
   const [isCollapsed, setIsCollapsed] = useState(false);
   const effectiveCollapsed = isMobileDrawer ? false : isCollapsed;
+
+  // PWA install prompt
+  const { isInstallable, isInstalled, isIOS, promptInstall } = useInstallPrompt();
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterType>('all');
   const [hoveredSession, setHoveredSession] = useState<SessionWithMachine | null>(null);
@@ -482,6 +488,47 @@ export function HomeSidebar({
             </div>
           )}
         </div>
+
+        {/* Install App Button - shown only on mobile when installable */}
+        {isMobileDrawer && isInstallable && !isInstalled && (
+          <div className="border-t border-white/5 p-3">
+            {isIOS ? (
+              // iOS: Show instructions
+              <div className="rounded-lg bg-orange-500/10 p-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-orange-500/20">
+                    <Download className="h-4 w-4 text-orange-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-orange-300">Installer l&apos;app</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-white/50">
+                      Appuyez sur{' '}
+                      <span className="inline-flex items-center rounded bg-white/10 px-1">
+                        <Share className="h-3 w-3" />
+                      </span>{' '}
+                      puis &quot;Sur l&apos;ecran d&apos;accueil&quot;
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Android/Desktop: Show install button
+              <button
+                onClick={promptInstall}
+                className={cn(
+                  'flex w-full items-center justify-center gap-2 rounded-lg py-3',
+                  'bg-orange-500/10 text-sm font-medium text-orange-400',
+                  'hover:bg-orange-500/20 active:scale-[0.98]',
+                  'touch-manipulation transition-all',
+                  'border border-orange-500/20'
+                )}
+              >
+                <Download className="h-4 w-4" />
+                <span>Installer l&apos;application</span>
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Keyboard shortcut hint - hidden on mobile */}
         {!effectiveCollapsed && !isMobileDrawer && (

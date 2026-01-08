@@ -7,6 +7,7 @@ import { SessionView } from '@/components/SessionView';
 import { NewSessionModal } from '@/components/NewSessionModal';
 import { AgentConnectionSettings } from '@/components/AgentConnectionSettings';
 import { MobileSidebarDrawer } from '@/components/MobileSidebarDrawer';
+import { InstallBanner } from '@/components/InstallBanner';
 import { LoadingView } from './LoadingView';
 import { NoConnectionView } from './NoConnectionView';
 import { Header } from './Header';
@@ -165,6 +166,9 @@ export function HomeContent() {
         machines={currentMachine ? [currentMachine] : []}
         onStartSession={handleStartSession}
       />
+
+      {/* PWA Install Banner - only on mobile */}
+      {isMobile && <InstallBanner />}
     </main>
   );
 }
