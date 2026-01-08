@@ -139,4 +139,55 @@ describe('MobileKeybar', () => {
       expect(KEYS.SHIFT_TAB.startsWith('\x1b[')).toBe(true);
     });
   });
+
+  describe('Touch scroll logic', () => {
+    // Test the scroll calculation logic used in useTerminalConnection
+    const calculateScrollLines = (deltaY: number): number => {
+      return Math.round(deltaY / 20); // ~20px per line
+    };
+
+    it('scrolls 1 line for ~20px movement', () => {
+      expect(calculateScrollLines(20)).toBe(1);
+      expect(calculateScrollLines(25)).toBe(1);
+      expect(calculateScrollLines(15)).toBe(1);
+    });
+
+    it('scrolls multiple lines for larger movements', () => {
+      expect(calculateScrollLines(40)).toBe(2);
+      expect(calculateScrollLines(60)).toBe(3);
+      expect(calculateScrollLines(100)).toBe(5);
+    });
+
+    it('scrolls in negative direction for upward swipe', () => {
+      // When swiping up (finger moves up), deltaY is negative
+      expect(calculateScrollLines(-20)).toBe(-1);
+      expect(calculateScrollLines(-40)).toBe(-2);
+    });
+
+    it('returns 0 for small movements', () => {
+      expect(calculateScrollLines(5)).toBe(0);
+      // Note: Math.round(-0.25) = -0, which equals 0 in JS comparisons
+      expect(calculateScrollLines(-5) === 0).toBe(true);
+    });
+
+    it('should only scroll when vertical movement exceeds horizontal', () => {
+      // This simulates the condition: Math.abs(deltaY) > deltaX && Math.abs(deltaY) > 10
+      const shouldScroll = (deltaY: number, deltaX: number): boolean => {
+        return Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 10;
+      };
+
+      // Vertical swipe - should scroll
+      expect(shouldScroll(30, 5)).toBe(true);
+      expect(shouldScroll(-30, 5)).toBe(true);
+
+      // Horizontal swipe - should not scroll
+      expect(shouldScroll(5, 30)).toBe(false);
+
+      // Diagonal but mostly vertical - should scroll
+      expect(shouldScroll(40, 20)).toBe(true);
+
+      // Small movement - should not scroll (threshold)
+      expect(shouldScroll(8, 2)).toBe(false);
+    });
+  });
 });

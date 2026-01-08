@@ -113,6 +113,7 @@ export function useTerminalConnection({
     let handleTouchStart: ((e: TouchEvent) => void) | null = null;
     let handleTouchMove: ((e: TouchEvent) => void) | null = null;
     let termElement: HTMLElement | null = null;
+    let touchElement: HTMLElement | null = null;
     let resizeObserver: ResizeObserver | null = null;
     let viewportQueries: MediaQueryList[] = [];
 
@@ -219,7 +220,9 @@ export function useTerminalConnection({
       });
 
       // Touch scroll handler for mobile - xterm.js canvas doesn't support native touch scroll
-      if (isMobile && term.element) {
+      // We need to attach to the xterm-screen element which contains the canvas
+      const xtermScreen = term.element?.querySelector('.xterm-screen') as HTMLElement | null;
+      if (isMobile && xtermScreen) {
         let touchStartY = 0;
         let touchStartX = 0;
         const currentTermForTouch = term; // Capture for closure
@@ -242,8 +245,10 @@ export function useTerminalConnection({
           }
         };
 
-        term.element.addEventListener('touchstart', handleTouchStart, { passive: true });
-        term.element.addEventListener('touchmove', handleTouchMove, { passive: false });
+        xtermScreen.addEventListener('touchstart', handleTouchStart, { passive: true });
+        xtermScreen.addEventListener('touchmove', handleTouchMove, { passive: false });
+        // Store reference for cleanup
+        touchElement = xtermScreen;
       }
 
       // WebSocket connection
@@ -548,11 +553,11 @@ export function useTerminalConnection({
       if (handleMouseUp) window.removeEventListener('mouseup', handleMouseUp);
       if (handlePaste && termElement) termElement.removeEventListener('paste', handlePaste);
       // Clean up touch scroll listeners
-      if (termElement && handleTouchStart) {
-        termElement.removeEventListener('touchstart', handleTouchStart);
+      if (touchElement && handleTouchStart) {
+        touchElement.removeEventListener('touchstart', handleTouchStart);
       }
-      if (termElement && handleTouchMove) {
-        termElement.removeEventListener('touchmove', handleTouchMove);
+      if (touchElement && handleTouchMove) {
+        touchElement.removeEventListener('touchmove', handleTouchMove);
       }
       if (resizeObserver) {
         resizeObserver.disconnect();
