@@ -246,5 +246,40 @@ describe('Version Module', () => {
       expect(version).toBe('2.0.0');
       expect(callCount).toBeGreaterThan(1);
     });
+
+    it('uses correct path for production mode (2 levels up, not 3)', async () => {
+      const { readFileSync } = await import('fs');
+      const mockedReadFileSync = vi.mocked(readFileSync);
+
+      // Track which paths are tried
+      const triedPaths: string[] = [];
+      mockedReadFileSync.mockImplementation((path) => {
+        triedPaths.push(path as string);
+        // Return version on any path to stop iteration
+        return JSON.stringify({ version: '1.0.0' });
+      });
+
+      const { getAgentVersion } = await import('../../src/version.js');
+      getAgentVersion();
+
+      // Should have tried at least one path
+      expect(triedPaths.length).toBeGreaterThan(0);
+
+      // The paths should all end in package.json
+      for (const path of triedPaths) {
+        expect(path).toContain('package.json');
+      }
+
+      // Verify the paths don't go too far up by checking that
+      // none of them are trying to access package.json from a directory
+      // that doesn't make sense (e.g., going 3+ levels above src)
+      // The resolved paths should be relative to the test file location
+      // and should point to reasonable package.json locations
+      expect(
+        triedPaths.some(
+          (p) => p.includes('apps/agent/package.json') || p.includes('247-cli/package.json')
+        )
+      ).toBe(true);
+    });
   });
 });

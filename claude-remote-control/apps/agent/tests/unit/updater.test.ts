@@ -80,6 +80,45 @@ describe('Updater Module', () => {
       vi.advanceTimersByTime(1100);
     });
 
+    it('changes to /tmp directory to avoid blocking agent directory', async () => {
+      vi.useFakeTimers();
+      const { writeFileSync } = await import('fs');
+      const mockedWriteFileSync = vi.mocked(writeFileSync);
+
+      const { triggerUpdate } = await import('../../src/updater.js');
+      triggerUpdate('1.0.0');
+
+      const scriptContent = mockedWriteFileSync.mock.calls[0][1] as string;
+      // Script should cd to /tmp before npm install to avoid ENOTEMPTY errors
+      expect(scriptContent).toContain('cd /tmp');
+      // The cd should come before the actual npm install command (not the comment)
+      const cdIndex = scriptContent.indexOf('cd /tmp');
+      const npmIndex = scriptContent.indexOf('npm install -g');
+      expect(cdIndex).toBeLessThan(npmIndex);
+
+      vi.advanceTimersByTime(1100);
+    });
+
+    it('fixes executable permissions after npm install', async () => {
+      vi.useFakeTimers();
+      const { writeFileSync } = await import('fs');
+      const mockedWriteFileSync = vi.mocked(writeFileSync);
+
+      const { triggerUpdate } = await import('../../src/updater.js');
+      triggerUpdate('1.0.0');
+
+      const scriptContent = mockedWriteFileSync.mock.calls[0][1] as string;
+      // Script should chmod +x the CLI binary after install
+      expect(scriptContent).toContain('chmod +x');
+      expect(scriptContent).toContain('dist/index.js');
+      // The chmod should come after npm install
+      const npmIndex = scriptContent.indexOf('npm install');
+      const chmodIndex = scriptContent.indexOf('chmod +x');
+      expect(chmodIndex).toBeGreaterThan(npmIndex);
+
+      vi.advanceTimersByTime(1100);
+    });
+
     it('spawns detached process', async () => {
       vi.useFakeTimers();
       const { spawn } = await import('child_process');
@@ -163,12 +202,8 @@ describe('Updater Module', () => {
       const { triggerUpdate } = await import('../../src/updater.js');
       triggerUpdate('2.5.0');
 
-      expect(mockWs.send).toHaveBeenCalledWith(
-        expect.stringContaining('"type":"update-pending"')
-      );
-      expect(mockWs.send).toHaveBeenCalledWith(
-        expect.stringContaining('"targetVersion":"2.5.0"')
-      );
+      expect(mockWs.send).toHaveBeenCalledWith(expect.stringContaining('"type":"update-pending"'));
+      expect(mockWs.send).toHaveBeenCalledWith(expect.stringContaining('"targetVersion":"2.5.0"'));
 
       vi.advanceTimersByTime(1100);
 
