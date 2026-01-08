@@ -239,7 +239,7 @@ export function MobileStatusStrip({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
               onClick={() => setIsExpanded(false)}
               data-testid="backdrop"
             />
@@ -251,7 +251,7 @@ export function MobileStatusStrip({
               exit={{ opacity: 0, y: -20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className={cn(
-                'z-35 fixed left-0 right-0',
+                'fixed left-0 right-0 z-50',
                 'top-[calc(env(safe-area-inset-top)+44px)]',
                 'max-h-[55vh] overflow-hidden',
                 'bg-[#0d0d14]/98 rounded-b-2xl border-b border-white/10 backdrop-blur-xl',
