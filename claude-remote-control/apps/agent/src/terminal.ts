@@ -60,6 +60,9 @@ export function createTerminal(
       TERM: 'xterm-256color',
       CLAUDE_TMUX_SESSION: sessionName, // Always set for hook detection
       PATH: `/opt/homebrew/bin:${process.env.PATH}`,
+      // Ensure UTF-8 encoding for proper accent/unicode support
+      LANG: process.env.LANG || 'en_US.UTF-8',
+      LC_ALL: process.env.LC_ALL || 'en_US.UTF-8',
     } as { [key: string]: string },
   });
 
