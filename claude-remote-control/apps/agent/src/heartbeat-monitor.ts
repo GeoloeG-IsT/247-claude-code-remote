@@ -4,8 +4,11 @@
  *
  * Logic:
  * - Heartbeat received → status "working"
- * - No heartbeat for 2s → status "needs_attention"
- * - tmux session removed → status "idle" (handled by cleanupStatusMaps)
+ * - No heartbeat for 3s → status "idle" (Claude stopped working, but NOT needs_attention)
+ * - tmux session removed → cleanup (handled by cleanupStatusMaps)
+ *
+ * Note: "needs_attention" should only be set when Claude explicitly needs user input,
+ * not just because heartbeats stopped. A timeout means Claude is idle, not blocked.
  */
 
 import { lastHeartbeat } from './routes/heartbeat.js';
@@ -43,7 +46,7 @@ export function startHeartbeatMonitor(): void {
       if (timeSinceLastBeat > HEARTBEAT_TIMEOUT_MS && status?.status === 'working') {
         const newStatus = {
           ...status,
-          status: 'needs_attention' as const,
+          status: 'idle' as const,
           lastEvent: 'HeartbeatTimeout',
           lastStatusChange: now,
         };
@@ -53,7 +56,7 @@ export function startHeartbeatMonitor(): void {
         // Persist to database
         sessionsDb.upsertSession(sessionName, {
           project: status.project || sessionName.split('--')[0] || '',
-          status: 'needs_attention',
+          status: 'idle',
           lastEvent: 'HeartbeatTimeout',
           lastActivity: status.lastActivity,
           lastStatusChange: now,
@@ -70,7 +73,7 @@ export function startHeartbeatMonitor(): void {
         broadcastStatusUpdate({
           name: sessionName,
           project: status.project || '',
-          status: 'needs_attention',
+          status: 'idle',
           statusSource: 'hook',
           lastEvent: 'HeartbeatTimeout',
           lastStatusChange: now,
@@ -94,7 +97,7 @@ export function startHeartbeatMonitor(): void {
         });
 
         console.log(
-          `[HeartbeatMonitor] ${sessionName} → needs_attention (no heartbeat for ${timeSinceLastBeat}ms)`
+          `[HeartbeatMonitor] ${sessionName} → idle (no heartbeat for ${timeSinceLastBeat}ms)`
         );
       }
     }

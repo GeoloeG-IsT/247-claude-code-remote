@@ -5,6 +5,7 @@
 
 import { Router, type Router as RouterType } from 'express';
 import path from 'path';
+import { execSync } from 'child_process';
 import { tmuxSessionStatus, broadcastStatusUpdate, type HookStatus } from '../status.js';
 import * as sessionsDb from '../db/sessions.js';
 import { getEnvironmentMetadata, getSessionEnvironment } from '../db/environments.js';
@@ -13,6 +14,19 @@ const router: RouterType = Router();
 
 // Track last heartbeat per session for timeout detection
 export const lastHeartbeat = new Map<string, number>();
+
+/**
+ * Check if a tmux session exists.
+ * Prevents ghost sessions from being created by stale heartbeats.
+ */
+function tmuxSessionExists(sessionName: string): boolean {
+  try {
+    execSync(`tmux has-session -t "${sessionName}" 2>/dev/null`);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * StatusLine payload from Claude Code
@@ -53,6 +67,13 @@ router.post('/', (req, res) => {
 
   if (!tmux_session) {
     return res.status(400).json({ error: 'Missing tmux_session' });
+  }
+
+  // Validate that the tmux session actually exists (prevents ghost sessions)
+  if (!tmuxSessionExists(tmux_session)) {
+    // Silently ignore heartbeats for non-existent sessions
+    // This can happen when a session is killed but Claude Code is still running briefly
+    return res.status(404).json({ error: 'Session not found' });
   }
 
   const now = Date.now();
