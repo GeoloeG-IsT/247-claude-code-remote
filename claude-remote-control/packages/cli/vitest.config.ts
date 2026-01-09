@@ -6,6 +6,7 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/**/*.test.ts'],
     exclude: ['tests/e2e/**/*.test.ts'],
+    reporter: 'dot',
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],
