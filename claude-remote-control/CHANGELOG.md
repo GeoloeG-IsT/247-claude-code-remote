@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-01-09
+
+### Bug Fixes
+
+- **pwa**: remove orange title bar on macOS PWA (9a04540)
+
+### Chores
+
+- reduce test output verbosity (20d8be0)
+
 ## [1.0.3] - 2026-01-09
 
 ### Bug Fixes
