@@ -7,8 +7,9 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Web terminal access to Claude Code from anywhere',
     start_url: '/',
     display: 'standalone',
+    display_override: ['window-controls-overlay'],
     background_color: '#0a0a0f',
-    theme_color: '#f97316',
+    theme_color: '#0a0a0f',
     orientation: 'any',
     icons: [
       {
