@@ -11,7 +11,8 @@ import {
   getSessionEnvironment,
   clearSessionEnvironment,
 } from '../db/environments.js';
-import { executionManager } from '../services/index.js';
+import { executionManager, worktreeManager } from '../services/index.js';
+import { config } from '../config.js';
 
 export function createSessionRoutes(): Router {
   const router = Router();
@@ -198,8 +199,23 @@ export function createSessionRoutes(): Router {
     }
 
     try {
+      // Get session info before deleting to retrieve worktree path
+      const session = sessionsDb.getSession(sessionName);
+
       await execAsync(`tmux kill-session -t "${sessionName}" 2>/dev/null`);
       console.log(`Killed tmux session: ${sessionName}`);
+
+      // Clean up worktree if session had one
+      if (session?.worktree_path && session?.project) {
+        const projectPath = `${config.projects.basePath}/${session.project}`.replace(
+          '~',
+          process.env.HOME!
+        );
+        const removed = await worktreeManager.remove(projectPath, session.worktree_path);
+        if (removed) {
+          console.log(`[Delete] Removed worktree at ${session.worktree_path}`);
+        }
+      }
 
       sessionsDb.deleteSession(sessionName);
       sessionsDb.clearSessionEnvironmentId(sessionName);
@@ -225,6 +241,9 @@ export function createSessionRoutes(): Router {
       return res.status(400).json({ error: 'Invalid session name' });
     }
 
+    // Get session info before archiving to retrieve worktree path
+    const sessionBeforeArchive = sessionsDb.getSession(sessionName);
+
     const archivedSession = sessionsDb.archiveSession(sessionName);
     if (!archivedSession) {
       return res.status(404).json({ error: 'Session not found' });
@@ -235,6 +254,19 @@ export function createSessionRoutes(): Router {
       console.log(`[Archive] Killed tmux session: ${sessionName}`);
     } catch {
       console.log(`[Archive] Tmux session ${sessionName} was already gone`);
+    }
+
+    // Clean up worktree immediately when archiving
+    if (sessionBeforeArchive?.worktree_path && sessionBeforeArchive?.project) {
+      const projectPath = `${config.projects.basePath}/${sessionBeforeArchive.project}`.replace(
+        '~',
+        process.env.HOME!
+      );
+      const removed = await worktreeManager.remove(projectPath, sessionBeforeArchive.worktree_path);
+      if (removed) {
+        sessionsDb.clearSessionWorktree(sessionName);
+        console.log(`[Archive] Removed worktree at ${sessionBeforeArchive.worktree_path}`);
+      }
     }
 
     tmuxSessionStatus.delete(sessionName);
