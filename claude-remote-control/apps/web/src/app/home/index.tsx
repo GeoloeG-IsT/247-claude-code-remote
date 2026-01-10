@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Zap } from 'lucide-react';
+import { Zap, Loader2, ArrowDown } from 'lucide-react';
 import { HomeSidebar } from '@/components/HomeSidebar';
 import { SessionView } from '@/components/SessionView';
 import { NewSessionModal } from '@/components/NewSessionModal';
@@ -17,6 +17,8 @@ import { Header } from './Header';
 import { useHomeState } from './useHomeState';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { useViewportHeight } from '@/hooks/useViewportHeight';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { useSessionPolling } from '@/contexts/SessionPollingContext';
 
 export function HomeContent() {
   const isMobile = useIsMobile();
@@ -55,6 +57,17 @@ export function HomeContent() {
   const [guideOpen, setGuideOpen] = useState(false);
   const [environmentsOpen, setEnvironmentsOpen] = useState(false);
 
+  // Pull-to-refresh for mobile PWA
+  const { refreshMachine } = useSessionPolling();
+  const { pullDistance, isRefreshing, isPulling, isThresholdReached, handlers } = usePullToRefresh({
+    onRefresh: async () => {
+      if (currentMachine) {
+        await refreshMachine(currentMachine.id);
+      }
+    },
+    disabled: !isMobile,
+  });
+
   if (loading) {
     return <LoadingView />;
   }
@@ -77,7 +90,47 @@ export function HomeContent() {
 
   // Connected state - Split View Layout
   return (
-    <main className="h-screen-safe flex flex-col overflow-hidden bg-[#0a0a10]">
+    <main
+      className="h-screen-safe flex flex-col overflow-hidden bg-[#0a0a10]"
+      onTouchStart={handlers.onTouchStart}
+      onTouchMove={handlers.onTouchMove}
+      onTouchEnd={handlers.onTouchEnd}
+    >
+      {/* Pull-to-refresh indicator */}
+      {isMobile && (isPulling || isRefreshing) && (
+        <div
+          className="pointer-events-none fixed left-0 right-0 z-50 flex justify-center"
+          style={{
+            top: 0,
+            transform: `translateY(${Math.min(pullDistance - 30, 50)}px)`,
+            opacity: Math.min(pullDistance / 40, 1),
+            transition: isRefreshing ? 'none' : 'opacity 0.1s ease-out',
+          }}
+        >
+          <div
+            className={`flex h-10 w-10 items-center justify-center rounded-full ${
+              isThresholdReached || isRefreshing
+                ? 'bg-orange-500/20 text-orange-400'
+                : 'bg-white/10 text-white/60'
+            }`}
+            style={{
+              transition: 'background-color 0.15s, color 0.15s',
+            }}
+          >
+            {isRefreshing ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <ArrowDown
+                className="h-5 w-5 transition-transform duration-150"
+                style={{
+                  transform: isThresholdReached ? 'rotate(180deg)' : 'rotate(0deg)',
+                }}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Mobile Status Strip - always visible on mobile when connected */}
       {isMobile && (
         <MobileStatusStrip
