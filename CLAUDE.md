@@ -99,6 +99,34 @@ The `pnpm release` command automates semantic versioning based on conventional c
 - **Always run tests** - Run `pnpm test` before committing any changes. All tests must pass.
 - **Always add relevant tests** - When adding or modifying features, write corresponding unit/integration tests. No code change without appropriate test coverage.
 
+## Git Worktree Workflow
+
+**IMPORTANT:** Ce projet utilise des git worktrees pour isoler les sessions de développement.
+
+- **Worktree principal (main):** `/Users/stan/Dev/BrainStorming`
+- **Worktrees de session:** `/tmp/247-workspaces/<session-name>` (ex: `BrainStorming--cool-bear-5`)
+
+### Règles de workflow
+
+1. **Développement:** Se fait dans le worktree de session (branche `session/<session-name>`)
+2. **Commits:** Peuvent être faits dans le worktree de session
+3. **Push de la branche:** Peut être fait depuis le worktree de session
+4. **Merge sur main:** Utiliser `git push origin <branch>:main` depuis le worktree de session
+5. **Release:** **DOIT être fait depuis le worktree principal** (`/Users/stan/Dev/BrainStorming/claude-remote-control`)
+
+### Commandes pour release
+
+```bash
+# Depuis le worktree de session, après avoir pushé sur main:
+cd /Users/stan/Dev/BrainStorming/claude-remote-control && git pull origin main && pnpm release
+```
+
+### Pourquoi ?
+
+- Le script de release vérifie qu'on est sur la branche `main`
+- La branche `main` est "locked" par le worktree principal
+- On ne peut pas checkout `main` depuis un worktree de session
+
 ## Testing Rules
 
 - **Always add tests for new code** - Every new feature, function, or component must have corresponding tests
