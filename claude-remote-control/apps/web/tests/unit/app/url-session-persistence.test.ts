@@ -266,6 +266,83 @@ describe('URL Session Persistence', () => {
     });
   });
 
+  describe('Worktree Parameter Persistence (Bug Fix)', () => {
+    /**
+     * Simulates handleStartSession behavior from useHomeState.ts
+     * which builds new URL params from existing searchParams
+     */
+    const buildNewSessionUrlFromExisting = (
+      existingParams: URLSearchParams,
+      sessionName: string,
+      machineId: string,
+      useWorktree: boolean
+    ): string => {
+      const params = new URLSearchParams(existingParams.toString());
+      params.set('session', sessionName);
+      params.set('machine', machineId);
+      params.set('create', 'true');
+      if (useWorktree) {
+        params.set('worktree', 'true');
+      } else {
+        params.delete('worktree');
+      }
+      return `?${params.toString()}`;
+    };
+
+    it('removes worktree param when switching from worktree to non-worktree session', () => {
+      // Simulate: user previously created a session WITH worktree
+      const existingParams = new URLSearchParams(
+        'session=old--session&machine=local&worktree=true'
+      );
+
+      // Now creating a new session WITHOUT worktree
+      const url = buildNewSessionUrlFromExisting(existingParams, 'new--session', 'local', false);
+
+      expect(url).not.toContain('worktree');
+      expect(url).toContain('session=new--session');
+      expect(url).toContain('create=true');
+    });
+
+    it('preserves worktree param when switching from worktree to worktree session', () => {
+      const existingParams = new URLSearchParams(
+        'session=old--session&machine=local&worktree=true'
+      );
+      const url = buildNewSessionUrlFromExisting(existingParams, 'new--session', 'local', true);
+
+      expect(url).toContain('worktree=true');
+      expect(url).toContain('session=new--session');
+    });
+
+    it('adds worktree param when switching from non-worktree to worktree session', () => {
+      const existingParams = new URLSearchParams('session=old--session&machine=local');
+      const url = buildNewSessionUrlFromExisting(existingParams, 'new--session', 'local', true);
+
+      expect(url).toContain('worktree=true');
+      expect(url).toContain('session=new--session');
+    });
+
+    it('keeps URL clean when creating non-worktree session from clean state', () => {
+      const existingParams = new URLSearchParams('');
+      const url = buildNewSessionUrlFromExisting(existingParams, 'project--new', 'local', false);
+
+      expect(url).not.toContain('worktree');
+      expect(url).toContain('session=project--new');
+      expect(url).toContain('machine=local');
+      expect(url).toContain('create=true');
+    });
+
+    it('removes worktree param even with other params present', () => {
+      const existingParams = new URLSearchParams(
+        'session=old&machine=local&worktree=true&environment=prod&someOther=value'
+      );
+      const url = buildNewSessionUrlFromExisting(existingParams, 'new--session', 'local', false);
+
+      expect(url).not.toContain('worktree');
+      expect(url).toContain('environment=prod');
+      expect(url).toContain('someOther=value');
+    });
+  });
+
   describe('Session Name Update', () => {
     interface SelectedSession {
       machineId: string;
