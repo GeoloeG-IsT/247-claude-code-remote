@@ -167,104 +167,187 @@ alias ll='ls -lah'
 alias ..='cd ..'
 alias ...='cd ../..'`;
 
-  // Animated rabbit chasing carrot loader function
+  // Animated robot boot loader with starfield
   // Skip animation in CI/test environments for faster startup
   const loaderAnimation = `
 # ═══════════════════════════════════════════════════════════════
-# Animated Loader: Rabbit chasing carrot with progress bar
+# Animated Loader: Robot AI boot sequence with starfield
 # ═══════════════════════════════════════════════════════════════
 
-# ANSI color codes (using $'...' syntax for proper escape)
+# ANSI color codes
 C_RESET=$'\\033[0m'
 C_ORANGE=$'\\033[38;5;${colors.orange}m'
 C_GREEN=$'\\033[38;5;${colors.green}m'
 C_CYAN=$'\\033[38;5;${colors.cyan}m'
 C_MUTED=$'\\033[38;5;${colors.muted}m'
 C_WHITE=$'\\033[38;5;${colors.white}m'
+C_MAGENTA=$'\\033[38;5;${colors.magenta}m'
 C_BOLD=$'\\033[1m'
 C_DIM=$'\\033[2m'
 
 # Skip animation in CI/test environments (set by terminal.ts)
 if [ -n "$_247_SKIP_ANIMATION" ]; then
-  # Quick non-animated version for tests
   :  # No output, go straight to welcome message
 else
 
 # Hide cursor during animation
 printf "\\033[?25l"
-
-# Clear screen
 clear
 
-# Rabbit ASCII art frames (running animation)
-# Frame 1: legs back    Frame 2: legs forward
-#  /)/)                  /)/)
-# ( . .)               ( . .)
-# (")~(")>             (")(")<
+# Terminal dimensions
+COLS=$(tput cols 2>/dev/null || echo 80)
+ROWS=$(tput lines 2>/dev/null || echo 24)
 
-# Animation: Rabbit running toward carrot
-animate_chase() {
-  local frame=0
-  local rabbit_pos=0
-  local carrot_pos=52
+# ─────────────────────────────────────────────────────────────
+# MOBILE FALLBACK: Simplified animation for narrow terminals
+# ─────────────────────────────────────────────────────────────
+if [ "$COLS" -lt 60 ]; then
+  # Simple centered animation for mobile
+  cx=$((COLS / 2 - 3))
 
-  for i in {1..30}; do
-    rabbit_pos=$((i * 2 - 2))
-    if [ $rabbit_pos -gt 44 ]; then rabbit_pos=44; fi
+  printf "\\n\\n"
+  printf "%*s\\033[38;5;${colors.orange}m\\033[1m247\\033[0m\\n" "$cx" ""
+  printf "\\n"
+  printf "%*s\\033[38;5;${colors.muted}m┌───┐\\033[0m\\n" "$((cx-1))" ""
+  printf "%*s\\033[38;5;${colors.muted}m│\\033[38;5;${colors.cyan}m- -\\033[38;5;${colors.muted}m│\\033[0m\\n" "$((cx-1))" ""
+  printf "%*s\\033[38;5;${colors.muted}m└───┘\\033[0m\\n" "$((cx-1))" ""
+  sleep 0.3
 
-    carrot_pos=$((54 - i / 3))
-    if [ $carrot_pos -lt $((rabbit_pos + 10)) ]; then carrot_pos=$((rabbit_pos + 10)); fi
+  # Wake up
+  printf "\\033[5;$((cx-1))H\\033[38;5;${colors.white}m┌───┐\\033[0m"
+  printf "\\033[6;$((cx-1))H\\033[38;5;${colors.white}m│\\033[38;5;${colors.cyan}m◕ ◕\\033[38;5;${colors.white}m│\\033[0m"
+  printf "\\033[7;$((cx-1))H\\033[38;5;${colors.white}m└───┘\\033[0m"
+  sleep 0.4
 
-    # Clear rabbit lines (3 lines for rabbit)
-    printf "\\033[6;1H\\033[K"
-    printf "\\033[7;1H\\033[K"
-    printf "\\033[8;1H\\033[K"
-
-    local gap=$((carrot_pos - rabbit_pos - 7))
-    if [ $gap -lt 0 ]; then gap=0; fi
-
-    # Draw rabbit with running animation
-    printf "\\033[6;1H"
-    printf "%*s" "$rabbit_pos" ""
-    printf "\\033[38;5;${colors.white}m (\\\\/)/)\\033[0m"
-    printf "%*s" "$gap" ""
-    printf "\\033[38;5;${colors.green}m//\\033[0m\\n"
-
-    printf "%*s" "$rabbit_pos" ""
-    printf "\\033[38;5;${colors.white}m( \\033[38;5;${colors.cyan}m. .\\033[38;5;${colors.white}m)\\033[0m"
-    printf "%*s" "$gap" ""
-    printf "\\033[38;5;${colors.orange}m<\\033[38;5;${colors.green}m}}\\033[0m\\n"
-
-    printf "%*s" "$rabbit_pos" ""
-    if [ $((frame % 2)) -eq 0 ]; then
-      printf "\\033[38;5;${colors.white}mc(\\033[38;5;${colors.muted}m\\"\\033[38;5;${colors.white}m)(\\033[38;5;${colors.muted}m\\"\\033[38;5;${colors.white}m)\\033[0m"
-    else
-      printf "\\033[38;5;${colors.white}mc(\\033[38;5;${colors.muted}m\\"\\033[38;5;${colors.white}m) (\\033[38;5;${colors.muted}m\\"\\033[38;5;${colors.white}m)\\033[0m"
-    fi
-
-    frame=$((frame + 1))
-    sleep 0.07
+  # Progress - simple version for mobile
+  for p in 25 50 75 100; do
+    filled=$((p / 10))
+    empty=$((10 - filled))
+    printf "\\033[9;$((cx-5))H\\033[K"
+    printf "\\033[38;5;${colors.orange}m"
+    j=0; while [ $j -lt $filled ]; do printf "█"; j=$((j+1)); done
+    printf "\\033[38;5;${colors.muted}m"
+    j=0; while [ $j -lt $empty ]; do printf "░"; j=$((j+1)); done
+    printf "\\033[0m %d%%" "$p"
+    sleep 0.2
   done
 
-  # Final frame: rabbit eating carrot!
-  printf "\\033[6;1H\\033[K"
-  printf "\\033[7;1H\\033[K"
-  printf "\\033[8;1H\\033[K"
+  sleep 0.3
+  printf "\\033[?25h"
+  clear
+else
 
-  printf "\\033[6;1H"
-  printf "%*s" "46" ""
-  printf "\\033[38;5;${colors.white}m (\\\\/)/)\\033[0m\\n"
-  printf "%*s" "46" ""
-  printf "\\033[38;5;${colors.white}m( \\033[38;5;${colors.cyan}m^.^\\033[38;5;${colors.white}m)\\033[38;5;${colors.orange}m<\\033[38;5;${colors.green}m}}\\033[0m  \\033[38;5;${colors.green}m*munch*\\033[0m\\n"
-  printf "%*s" "46" ""
-  printf "\\033[38;5;${colors.white}mc(\\033[38;5;${colors.muted}m\\"\\033[38;5;${colors.white}m)(\\033[38;5;${colors.muted}m\\"\\033[38;5;${colors.white}m)\\033[0m"
+# ─────────────────────────────────────────────────────────────
+# STARFIELD: Twinkling stars background
+# ─────────────────────────────────────────────────────────────
+declare -a STAR_X STAR_Y STAR_CHAR
+STAR_CHARS=("." "·" "+" "*" "✦" "✧")
+NUM_STARS=25
+
+init_stars() {
+  for i in $(seq 0 $((NUM_STARS - 1))); do
+    STAR_X[$i]=$((RANDOM % (COLS - 2) + 1))
+    STAR_Y[$i]=$((RANDOM % (ROWS - 6) + 1))
+    STAR_CHAR[$i]=\${STAR_CHARS[$((RANDOM % \${#STAR_CHARS[@]}))]}
+  done
 }
 
-# Progress bar animation
+draw_stars() {
+  local frame=$1
+  for i in $(seq 0 $((NUM_STARS - 1))); do
+    local x=\${STAR_X[$i]}
+    local y=\${STAR_Y[$i]}
+    local char_idx=$(( (frame + i) % \${#STAR_CHARS[@]} ))
+    local char=\${STAR_CHARS[$char_idx]}
+    # Twinkle effect: some stars dim/bright
+    if [ $(( (frame + i) % 3 )) -eq 0 ]; then
+      printf "\\033[\${y};\${x}H\\033[38;5;${colors.muted}m$char\\033[0m"
+    else
+      printf "\\033[\${y};\${x}H\\033[38;5;${colors.white}m$char\\033[0m"
+    fi
+  done
+}
+
+# ─────────────────────────────────────────────────────────────
+# ROBOT: Cute AI robot with expressions
+# ─────────────────────────────────────────────────────────────
+draw_robot() {
+  local state=$1  # boot, think, happy
+  local cx=$((COLS / 2 - 4))
+  local cy=8
+
+  # Clear robot area
+  for row in $(seq $cy $((cy + 5))); do
+    printf "\\033[$row;$((cx-2))H                    "
+  done
+
+  case $state in
+    boot)
+      printf "\\033[$cy;\${cx}H\\033[38;5;${colors.muted}m  ┌───┐\\033[0m"
+      printf "\\033[$((cy+1));\${cx}H\\033[38;5;${colors.muted}m  │\\033[38;5;${colors.cyan}m- -\\033[38;5;${colors.muted}m│\\033[0m"
+      printf "\\033[$((cy+2));\${cx}H\\033[38;5;${colors.muted}m  │ \\033[38;5;${colors.white}m▽\\033[38;5;${colors.muted}m │\\033[0m"
+      printf "\\033[$((cy+3));\${cx}H\\033[38;5;${colors.muted}m  └─┬─┘\\033[0m"
+      printf "\\033[$((cy+4));\${cx}H\\033[38;5;${colors.muted}m   /|\\\\\\033[0m"
+      ;;
+    think)
+      printf "\\033[$cy;\${cx}H\\033[38;5;${colors.white}m  ┌───┐\\033[0m"
+      printf "\\033[$((cy+1));\${cx}H\\033[38;5;${colors.white}m  │\\033[38;5;${colors.cyan}m◔ ◔\\033[38;5;${colors.white}m│\\033[0m"
+      printf "\\033[$((cy+2));\${cx}H\\033[38;5;${colors.white}m  │ \\033[38;5;${colors.orange}m○\\033[38;5;${colors.white}m │\\033[0m"
+      printf "\\033[$((cy+3));\${cx}H\\033[38;5;${colors.white}m  └─┬─┘\\033[0m"
+      printf "\\033[$((cy+4));\${cx}H\\033[38;5;${colors.white}m   /|\\\\\\033[0m"
+      # Thinking sparkle
+      printf "\\033[$((cy-1));$((cx+8))H\\033[38;5;${colors.magenta}m✦\\033[0m"
+      ;;
+    happy)
+      printf "\\033[$cy;\${cx}H\\033[38;5;${colors.white}m  ┌───┐\\033[0m"
+      printf "\\033[$((cy+1));\${cx}H\\033[38;5;${colors.white}m  │\\033[38;5;${colors.cyan}m◕ ◕\\033[38;5;${colors.white}m│\\033[0m"
+      printf "\\033[$((cy+2));\${cx}H\\033[38;5;${colors.white}m  │ \\033[38;5;${colors.green}m◡\\033[38;5;${colors.white}m │\\033[0m"
+      printf "\\033[$((cy+3));\${cx}H\\033[38;5;${colors.white}m  └─┬─┘\\033[0m"
+      printf "\\033[$((cy+4));\${cx}H\\033[38;5;${colors.white}m  \\\\|/\\033[0m"
+      # Happy sparkles
+      printf "\\033[$((cy-1));$((cx-1))H\\033[38;5;${colors.orange}m✧\\033[0m"
+      printf "\\033[$cy;$((cx+9))H\\033[38;5;${colors.green}m✦\\033[0m"
+      printf "\\033[$((cy+2));$((cx-2))H\\033[38;5;${colors.cyan}m·\\033[0m"
+      ;;
+  esac
+}
+
+# ─────────────────────────────────────────────────────────────
+# LOGO: 247 with scan effect
+# ─────────────────────────────────────────────────────────────
+draw_logo() {
+  local scan_pos=$1
+  local lx=$((COLS / 2 - 12))
+  local ly=2
+
+  # Logo lines
+  local L1="  ██████  ██  ██ ███████"
+  local L2="      ██  ██  ██      ██"
+  local L3="  █████   ██████      ██"
+  local L4="  ██          ██      ██"
+  local L5="  ███████     ██      ██"
+
+  # Draw with optional scan highlight
+  local lines=("$L1" "$L2" "$L3" "$L4" "$L5")
+  for i in $(seq 0 4); do
+    printf "\\033[$((ly + i));\${lx}H"
+    if [ "$scan_pos" -eq "$i" ]; then
+      printf "\\033[38;5;${colors.white}m\\033[1m\${lines[$i]}\\033[0m"
+    else
+      printf "\\033[38;5;${colors.orange}m\${lines[$i]}\\033[0m"
+    fi
+  done
+}
+
+# ─────────────────────────────────────────────────────────────
+# PROGRESS BAR: Animated with gradient
+# ─────────────────────────────────────────────────────────────
 show_progress() {
-  local steps=("Initializing tmux" "Loading config" "Setting up env" "Ready!")
+  local steps=("⚡ Booting up..." "🔧 Loading config..." "🌐 Connecting..." "✨ Ready!")
   local total=\${#steps[@]}
-  local bar_width=40
+  local bar_width=30
+  local bx=$((COLS / 2 - bar_width / 2 - 3))
+  local by=16
 
   for i in "\${!steps[@]}"; do
     local step=\${steps[$i]}
@@ -272,45 +355,68 @@ show_progress() {
     local filled=$(( progress * bar_width / 100 ))
     local empty=$(( bar_width - filled ))
 
-    # Progress bar line
-    printf "\\033[11;3H\\033[K"
-    printf "  \\033[38;5;${colors.muted}m[\\033[0m"
+    # Draw starfield frame
+    draw_stars $i
+
+    # Progress bar with rounded corners
+    printf "\\033[$by;\${bx}H\\033[K"
+    printf "\\033[38;5;${colors.muted}m╭\\033[0m"
     printf "\\033[38;5;${colors.orange}m%*s\\033[0m" "$filled" "" | tr ' ' '█'
     printf "\\033[38;5;${colors.muted}m%*s\\033[0m" "$empty" "" | tr ' ' '░'
-    printf "\\033[38;5;${colors.muted}m]\\033[0m"
+    printf "\\033[38;5;${colors.muted}m╮\\033[0m"
     printf " \\033[38;5;${colors.cyan}m%3d%%\\033[0m" "$progress"
 
-    # Status line
-    printf "\\033[12;3H\\033[K"
-    printf "  \\033[38;5;${colors.muted}m%s\\033[0m" "$step"
+    # Status message
+    printf "\\033[$((by + 1));\${bx}H\\033[K"
+    printf "\\033[38;5;${colors.muted}m  $step\\033[0m"
 
-    sleep 0.4
+    sleep 0.35
   done
 }
 
-# Main animation sequence
-printf "\\n"
-printf "\\033[2;1H"
-printf "  \\033[38;5;${colors.orange}m\\033[1m    ____  _  _  ______ \\033[0m\\n"
-printf "  \\033[38;5;${colors.orange}m\\033[1m   / __ \\\\| || ||____  |\\033[0m\\n"
-printf "  \\033[38;5;${colors.orange}m\\033[1m  | |  | | || |_   / / \\033[0m\\n"
-printf "  \\033[38;5;${colors.orange}m\\033[1m  | |  | |__   _| / /  \\033[0m\\n"
-printf "  \\033[38;5;${colors.orange}m\\033[1m   \\\\___\\\\_\\\\  |_|/_/    \\033[0m\\n"
-printf "\\n"
+# ─────────────────────────────────────────────────────────────
+# MAIN ANIMATION SEQUENCE (~3s)
+# ─────────────────────────────────────────────────────────────
+init_stars
 
-animate_chase &
-CHASE_PID=$!
+# Phase 1: Starfield appears (0.2s)
+for f in $(seq 0 2); do
+  draw_stars $f
+  sleep 0.07
+done
 
-sleep 0.5
+# Phase 2: Logo with scan effect (0.6s)
+for scan in $(seq 0 5); do
+  draw_logo $((scan % 6))
+  draw_stars $scan
+  sleep 0.1
+done
+draw_logo -1  # Final state (no highlight)
+
+# Phase 3: Robot boot sequence (0.8s)
+draw_robot "boot"
+sleep 0.25
+draw_stars 7
+draw_robot "think"
+sleep 0.35
+draw_stars 8
+
+# Phase 4: Progress bar (1.0s)
 show_progress
 
-wait $CHASE_PID 2>/dev/null
+# Phase 5: Robot happy (0.4s)
+draw_robot "happy"
+for f in $(seq 9 12); do
+  draw_stars $f
+  sleep 0.08
+done
 
-# Show cursor again
+# Show cursor
 printf "\\033[?25h"
-
-sleep 0.6
+sleep 0.3
 clear
+
+fi  # End of desktop/mobile conditional
 
 fi  # End of animation conditional`;
 

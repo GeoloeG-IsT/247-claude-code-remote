@@ -259,7 +259,9 @@
       "Bash(pnpm --filter 247-web add:*)",
       "Bash(git -C /private/tmp/247-workspaces/BrainStorming--bright-eagle-37 log --oneline -20)",
       "Bash(git restore:*)",
-      "Bash(gh pr create:*)"
+      "Bash(gh pr create:*)",
+      "Bash(pnpm --filter 247-agent lint:*)",
+      "Bash(npx eslint:*)"
     ]
   },
   "remote": {
