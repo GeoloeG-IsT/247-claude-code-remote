@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-01-11
+
+### Features
+
+- **agent**: redesign terminal boot animation with robot AI (58bc37e)
+- **hooks**: add typecheck to pre-commit and tests to pre-push (b27c66d)
+
 ## [2.1.0] - 2026-01-11
 
 ### Features
