@@ -256,7 +256,10 @@
       "Bash(git cat-file:*)",
       "Bash(pnpm build:web:*)",
       "Skill(ralph-loop:ralph-loop)",
-      "Bash(pnpm --filter 247-web add:*)"
+      "Bash(pnpm --filter 247-web add:*)",
+      "Bash(git -C /private/tmp/247-workspaces/BrainStorming--bright-eagle-37 log --oneline -20)",
+      "Bash(git restore:*)",
+      "Bash(gh pr create:*)"
     ]
   },
   "remote": {

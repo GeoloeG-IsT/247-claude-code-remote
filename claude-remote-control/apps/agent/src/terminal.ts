@@ -56,6 +56,9 @@ export function createTerminal(
   let tmuxArgs: string[];
   let initScriptPath: string | null = null;
 
+  // Detect test/CI environment for animation skipping
+  const isTestEnv = !!(process.env.VITEST || process.env.CI || process.env.JEST_WORKER_ID);
+
   if (existingSession) {
     tmuxArgs = ['attach-session', '-t', sessionName];
   } else {
@@ -75,7 +78,16 @@ export function createTerminal(
 
     // Spawn tmux with the init script
     // The script exports env vars, configures tmux, then runs exec bash -i
-    tmuxArgs = ['new-session', '-s', sessionName, '-c', cwd, `bash --init-file ${initScriptPath}`];
+    // Use -e to pass environment variable for animation skipping in tests
+    tmuxArgs = [
+      'new-session',
+      '-s',
+      sessionName,
+      '-c',
+      cwd,
+      ...(isTestEnv ? ['-e', '_247_SKIP_ANIMATION=1'] : []),
+      `bash --init-file ${initScriptPath}`,
+    ];
   }
 
   console.log(`[Terminal] Spawning: tmux ${tmuxArgs.join(' ')}`);
@@ -93,6 +105,8 @@ export function createTerminal(
       // Ensure UTF-8 encoding for proper accent/unicode support
       LANG: process.env.LANG || 'en_US.UTF-8',
       LC_ALL: process.env.LC_ALL || 'en_US.UTF-8',
+      // Pass CI/test detection to init script for animation skipping
+      ...(isTestEnv ? { _247_SKIP_ANIMATION: '1' } : {}),
     } as { [key: string]: string },
   });
 
