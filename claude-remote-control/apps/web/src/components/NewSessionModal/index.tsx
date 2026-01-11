@@ -128,17 +128,18 @@ export function NewSessionModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          onClick={() => onOpenChange(false)}
+          className="fixed inset-0 z-[60] flex items-center justify-center"
         >
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => onOpenChange(false)}
+          />
 
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 10 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            onClick={(e) => e.stopPropagation()}
             className={cn(
               'relative mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col',
               'rounded-2xl border border-white/10 bg-[#0d0d14]',
@@ -264,6 +265,7 @@ export function NewSessionModal({
                   onClick={handleStartSession}
                   disabled={!selectedMachine || !selectedProject}
                   className={cn(
+                    'touch-manipulation active:scale-[0.98]',
                     'flex items-center gap-2 rounded-xl px-5 py-2.5 font-medium transition-all',
                     selectedMachine && selectedProject
                       ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25 hover:from-orange-400 hover:to-amber-400'
