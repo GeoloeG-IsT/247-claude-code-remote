@@ -323,7 +323,7 @@ printf "  \${C_MUTED}━━━━━━━━━━━━━━━━━━━�
 printf "  \${C_ORANGE}\${C_BOLD}247\${C_RESET} \${C_MUTED}│\${C_RESET} \${C_GREEN}${escapedProject}\${C_RESET}\\n"
 printf "  \${C_MUTED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\${C_RESET}\\n"
 printf "  \${C_MUTED}Session:\${C_RESET} \${C_CYAN}${escapedSession}\${C_RESET}\\n"
-printf "  \${C_MUTED}Tips:   \${C_RESET} \${C_DIM}Type\${C_RESET} \${C_ORANGE}c\${C_RESET} \${C_DIM}to start Claude Code\${C_RESET}\\n"
+printf "  \${C_MUTED}Tips:   \${C_RESET} \${C_DIM}Type\${C_RESET} \${C_ORANGE}claude\${C_RESET} \${C_DIM}to start Claude Code\${C_RESET}\\n"
 printf "  \${C_MUTED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\${C_RESET}\\n"
 printf "\\n"`;
 

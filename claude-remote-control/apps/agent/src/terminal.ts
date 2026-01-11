@@ -1,7 +1,12 @@
 import * as pty from '@homebridge/node-pty-prebuilt-multiarch';
 import { exec, execSync } from 'child_process';
 import { promisify } from 'util';
-import { generateInitScript, writeInitScript, cleanupInitScript } from './lib/init-script';
+import {
+  generateInitScript,
+  writeInitScript,
+  cleanupInitScript,
+  detectUserShell,
+} from './lib/init-script';
 import * as path from 'path';
 
 const execAsync = promisify(exec);
@@ -65,19 +70,24 @@ export function createTerminal(
     // Extract project name from cwd (last directory component)
     const projectName = path.basename(cwd) || 'unknown';
 
+    // Detect user's preferred shell for the interactive session
+    const userShell = detectUserShell();
+
     // Generate and write init script for new sessions
-    // Always use bash since we launch with `bash --init-file`
+    // The script is always bash but ends with `exec ${userShell} -i`
     const scriptContent = generateInitScript({
       sessionName,
       projectName,
       customEnvVars,
-      shell: 'bash',
+      shell: userShell,
     });
     initScriptPath = writeInitScript(sessionName, scriptContent);
-    console.log(`[Terminal] Init script written to: ${initScriptPath}`);
+    console.log(
+      `[Terminal] Init script written to: ${initScriptPath} (target shell: ${userShell})`
+    );
 
-    // Spawn tmux with the init script
-    // The script exports env vars, configures tmux, then runs exec bash -i
+    // Spawn tmux with bash running the init script
+    // The script sets up env vars, tmux config, then runs `exec ${userShell} -i`
     // Use -e to pass environment variable for animation skipping in tests
     tmuxArgs = [
       'new-session',
@@ -105,6 +115,8 @@ export function createTerminal(
       // Ensure UTF-8 encoding for proper accent/unicode support
       LANG: process.env.LANG || 'en_US.UTF-8',
       LC_ALL: process.env.LC_ALL || 'en_US.UTF-8',
+      // Suppress macOS bash deprecation warning
+      BASH_SILENCE_DEPRECATION_WARNING: '1',
       // Pass CI/test detection to init script for animation skipping
       ...(isTestEnv ? { _247_SKIP_ANIMATION: '1' } : {}),
     } as { [key: string]: string },
