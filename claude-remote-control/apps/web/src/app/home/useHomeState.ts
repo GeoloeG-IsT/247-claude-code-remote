@@ -166,6 +166,8 @@ export function useHomeState() {
       params.set('create', 'true');
       if (useWorktree) {
         params.set('worktree', 'true');
+      } else {
+        params.delete('worktree');
       }
       router.replace(`?${params.toString()}`, { scroll: false });
     },
