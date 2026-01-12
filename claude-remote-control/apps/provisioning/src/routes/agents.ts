@@ -27,7 +27,7 @@ export const agentsRoutes = new Hono();
 const DEFAULT_REGION = 'sjc';
 
 // Docker image for cloud agent (built by GitHub Actions)
-const CLOUD_AGENT_IMAGE = 'ghcr.io/stangirard/247-cloud-agent:latest';
+const CLOUD_AGENT_IMAGE = 'ghcr.io/quivrhq/247-cloud-agent:latest';
 
 /**
  * Helper to get authenticated user from request
