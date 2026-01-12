@@ -88,6 +88,11 @@ export async function createServer() {
   // Start heartbeat timeout monitor
   startHeartbeatMonitor();
 
+  // Health check endpoint for container orchestration
+  app.get('/health', (_req, res) => {
+    res.json({ status: 'ok', timestamp: Date.now() });
+  });
+
   // Mount API routes
   app.use('/api', createProjectRoutes());
   app.use('/api/environments', createEnvironmentRoutes());
