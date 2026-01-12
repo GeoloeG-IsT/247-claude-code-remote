@@ -6,7 +6,10 @@ export interface InitScriptOptions {
   sessionName: string;
   projectName: string;
   customEnvVars?: Record<string, string>;
+  /** Shell to use for init script content (prompt, history config). Always 'bash' since bash sources the file. */
   shell?: 'bash' | 'zsh';
+  /** Shell to exec into at the end for the interactive session. Defaults to detected user shell. */
+  targetShell?: 'bash' | 'zsh';
 }
 
 /**
@@ -23,7 +26,13 @@ export function detectUserShell(): 'bash' | 'zsh' {
  * Features: adaptive prompt, tmux status bar, useful aliases, welcome message.
  */
 export function generateInitScript(options: InitScriptOptions): string {
-  const { sessionName, projectName, customEnvVars = {}, shell = detectUserShell() } = options;
+  const {
+    sessionName,
+    projectName,
+    customEnvVars = {},
+    shell = 'bash',
+    targetShell = detectUserShell(),
+  } = options;
 
   const escapedSession = escapeForBash(sessionName);
   const escapedProject = escapeForBash(projectName);
@@ -439,7 +448,8 @@ printf "\\n"`;
 # 247 Terminal Init Script - Auto-generated
 # Session: ${sessionName}
 # Project: ${projectName}
-# Shell: ${shell}
+# Init Shell: ${shell} (for script content)
+# Target Shell: ${targetShell} (interactive session)
 # Generated: ${new Date().toISOString()}
 
 # ═══════════════════════════════════════════════════════════════
@@ -484,7 +494,7 @@ ${welcomeMessage}
 # ═══════════════════════════════════════════════════════════════
 # SECTION 7: Start Session
 # ═══════════════════════════════════════════════════════════════
-exec ${shell} -i
+exec ${targetShell} -i
 `;
 }
 

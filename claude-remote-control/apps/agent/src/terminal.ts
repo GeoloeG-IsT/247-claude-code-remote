@@ -74,12 +74,15 @@ export function createTerminal(
     const userShell = detectUserShell();
 
     // Generate and write init script for new sessions
-    // The script is always bash but ends with `exec ${userShell} -i`
+    // The init script is always sourced by bash (via --init-file)
+    // So we generate it for bash, and it ends with `exec ${userShell} -i`
+    // to switch to the user's preferred interactive shell
     const scriptContent = generateInitScript({
       sessionName,
       projectName,
       customEnvVars,
-      shell: userShell,
+      shell: 'bash', // Always bash since bash sources the init-file
+      targetShell: userShell, // User's preferred shell for interactive session
     });
     initScriptPath = writeInitScript(sessionName, scriptContent);
     console.log(

@@ -26,6 +26,7 @@ describe('init-script', () => {
         sessionName: 'my-session',
         projectName: 'my-project',
         shell: 'bash',
+        targetShell: 'bash',
       });
 
       expect(script).toContain('#!/bin/bash');
@@ -150,6 +151,7 @@ describe('init-script', () => {
         sessionName: 'test',
         projectName: 'test-project',
         shell: 'bash',
+        targetShell: 'bash',
       });
 
       expect(script).toContain('PROMPT_COMMAND');
@@ -164,6 +166,7 @@ describe('init-script', () => {
         sessionName: 'test',
         projectName: 'test-project',
         shell: 'zsh',
+        targetShell: 'zsh',
       });
 
       expect(script).toContain('precmd_functions');
