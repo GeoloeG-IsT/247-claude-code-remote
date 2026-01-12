@@ -35,6 +35,9 @@ RUN cd packages/shared && pnpm build
 # Build the agent
 RUN cd apps/agent && pnpm build
 
+# Create standalone deployment with all dependencies
+RUN pnpm --filter 247-agent deploy /deploy/agent
+
 # =============================================================================
 # Stage 2: Final Ubuntu image with all dev tools
 # =============================================================================
@@ -149,10 +152,8 @@ RUN for i in 1 2 3; do apt-get update && break || sleep 15; done && \
 # =============================================================================
 WORKDIR /opt/247-agent
 
-# Copy built agent from builder stage
-COPY --from=builder /build/apps/agent/dist ./dist
-COPY --from=builder /build/apps/agent/node_modules ./node_modules
-COPY --from=builder /build/apps/agent/package.json ./
+# Copy standalone deployed agent from builder stage
+COPY --from=builder /deploy/agent ./
 
 # Create agent config directory
 RUN mkdir -p /home/quivr/.247/data && \

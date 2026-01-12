@@ -277,7 +277,17 @@
       "Bash(fly scale count:*)",
       "Bash(fly machine update:*)",
       "Bash(fly status:*)",
-      "WebFetch(domain:fly.io)"
+      "WebFetch(domain:fly.io)",
+      "Bash(pnpm --filter agent start)",
+      "Bash(247)",
+      "Bash(247 start:*)",
+      "Bash(DATABASE_URL=\"postgres://fake:fake@localhost:5432/fake\" pnpm db:generate:*)",
+      "Bash(fly postgres connect:*)",
+      "Bash(pnpm --filter 247-cli test -- dependencies)",
+      "Bash(pnpm --filter 247-cli bundle:*)",
+      "Bash(npm link)",
+      "Bash(gh workflow run:*)",
+      "Bash(docker build:*)"
     ]
   },
   "remote": {
