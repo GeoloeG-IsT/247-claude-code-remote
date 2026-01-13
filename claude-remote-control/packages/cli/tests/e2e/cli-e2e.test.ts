@@ -90,13 +90,6 @@ describe.skipIf(skipE2E)('247 CLI E2E Tests', () => {
       }
     });
 
-    it('installs hooks to .claude-plugins', async () => {
-      const port = await getFreePort();
-      await env.runCli(['init', '--name', 'test', '--port', String(port)]);
-
-      expect(env.fileExists('.claude-plugins/247-hooks')).toBe(true);
-    });
-
     it('refuses to overwrite without --force', async () => {
       const port1 = await getFreePort();
       const port2 = await getFreePort();
@@ -176,25 +169,26 @@ describe.skipIf(skipE2E)('247 CLI E2E Tests', () => {
   });
 
   describe('hooks command', () => {
-    it('shows installed after init (hooks are installed by default)', async () => {
+    it('shows statusLine API status after init', async () => {
       const port = await getFreePort();
       await env.runCli(['init', '--name', 'hooks-test', '--port', String(port)]);
 
       const result = await env.runCli(['hooks', 'status']);
 
-      // Hooks are installed by default during init
-      expect(result.stdout).toContain('Installed');
+      // New statusLine-based system shows this message
+      expect(result.stdout).toContain('Using new statusLine API');
     });
 
-    it('can reinstall hooks with --force', async () => {
+    it('shows deprecation warning on hooks install', async () => {
       const port = await getFreePort();
       await env.runCli(['init', '--name', 'hooks-test', '--port', String(port)]);
 
-      const installResult = await env.runCli(['hooks', 'install', '--force']);
-      expect(installResult.exitCode).toBe(0);
+      const installResult = await env.runCli(['hooks', 'install']);
+      // hooks install now shows deprecation warning
+      expect(installResult.stdout).toContain('deprecated');
 
       const statusResult = await env.runCli(['hooks', 'status']);
-      expect(statusResult.stdout).toContain('Installed');
+      expect(statusResult.stdout).toContain('Using new statusLine API');
     });
   });
 
