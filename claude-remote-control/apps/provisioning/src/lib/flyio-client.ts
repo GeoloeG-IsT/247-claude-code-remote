@@ -214,6 +214,69 @@ export async function allocateIPv6(
   }
 }
 
+/**
+ * Set secrets for a Fly.io app via GraphQL API
+ * Secrets are encrypted at rest and injected as environment variables
+ */
+export async function setSecrets(
+  token: string,
+  appName: string,
+  secrets: Record<string, string>
+): Promise<{ success: boolean; error?: string }> {
+  const mutation = `
+    mutation ($input: SetSecretsInput!) {
+      setSecrets(input: $input) {
+        release { id }
+      }
+    }
+  `;
+
+  const secretsArray = Object.entries(secrets).map(([key, value]) => ({
+    key,
+    value,
+  }));
+
+  try {
+    const response = await fetch(FLYIO_GRAPHQL_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        query: mutation,
+        variables: {
+          input: {
+            appId: appName,
+            secrets: secretsArray,
+          },
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      return { success: false, error: `HTTP ${response.status}` };
+    }
+
+    const data = (await response.json()) as {
+      data?: { setSecrets?: { release?: { id: string } } };
+      errors?: Array<{ message: string }>;
+    };
+
+    if (data.errors && data.errors.length > 0) {
+      const error = data.errors[0].message;
+      logger.warn({ appName, error }, 'Failed to set secrets');
+      return { success: false, error };
+    }
+
+    logger.info({ appName, secretCount: secretsArray.length }, 'Secrets set successfully');
+    return { success: true };
+  } catch (error) {
+    logger.error({ error, appName }, 'Failed to set secrets');
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 // =============================================================================
 // Fly.io Machines REST API
 // =============================================================================

@@ -187,5 +187,13 @@ USER quivr
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:4678/health || exit 1
 
-# Start the agent
-CMD ["node", "/opt/247-agent/dist/index.js"]
+# Copy entrypoint script (configures GitHub auth, then starts agent)
+COPY apps/cloud-agent/scripts/entrypoint.sh /entrypoint.sh
+
+# Need to switch to root to set permissions, then back to quivr
+USER root
+RUN chmod +x /entrypoint.sh
+USER quivr
+
+# Start via entrypoint script
+CMD ["/entrypoint.sh"]

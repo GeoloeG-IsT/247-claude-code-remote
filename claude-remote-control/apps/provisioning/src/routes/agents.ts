@@ -4,7 +4,7 @@ import { readFileSync } from 'fs';
 import { eq, and } from 'drizzle-orm';
 import { auth } from '../auth.js';
 import { db } from '../db/index.js';
-import { flyTokens, agents } from '../db/schema.js';
+import { flyTokens, agents, account } from '../db/schema.js';
 import { config } from '../lib/config.js';
 import { decrypt } from '../lib/crypto.js';
 import {
@@ -20,6 +20,7 @@ import {
   waitForMachineState,
   allocateSharedIPv4,
   allocateIPv6,
+  setSecrets,
   type FlyMachineConfig,
 } from '../lib/flyio-client.js';
 import { logger } from '../lib/logger.js';
@@ -159,6 +160,30 @@ agentsRoutes.post('/', async (c) => {
     }
     if (!ipv6Result.success) {
       logger.warn({ appName, error: ipv6Result.error }, 'Failed to allocate IPv6, continuing...');
+    }
+
+    // Step 1.6: Set GitHub credentials as secrets for Git authentication
+    const [userAccount] = await db
+      .select({ accessToken: account.accessToken })
+      .from(account)
+      .where(and(eq(account.userId, user.id), eq(account.providerId, 'github')))
+      .limit(1);
+
+    if (userAccount?.accessToken) {
+      const secretsResult = await setSecrets(token, appName, {
+        GITHUB_TOKEN: userAccount.accessToken,
+        GIT_USER_NAME: user.name || 'Quivr User',
+        GIT_USER_EMAIL: user.email || 'noreply@quivr.com',
+      });
+
+      if (!secretsResult.success) {
+        logger.warn(
+          { appName, error: secretsResult.error },
+          'Failed to set GitHub secrets, Git auth may not work'
+        );
+      }
+    } else {
+      logger.warn({ userId: user.id }, 'No GitHub access token found for user');
     }
 
     // Step 2: Create volume for persistent storage
