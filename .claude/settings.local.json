@@ -301,7 +301,12 @@
       "Bash(fly machine stop:*)",
       "Bash(fly machine destroy:*)",
       "Bash(dscacheutil:*)",
-      "WebFetch(domain:community.fly.io)"
+      "WebFetch(domain:community.fly.io)",
+      "Bash(pnpm tsc:*)",
+      "Bash(test:*)",
+      "Bash(fly certs add:*)",
+      "Bash(fly certs show:*)",
+      "Bash(vercel env:*)"
     ]
   },
   "remote": {
