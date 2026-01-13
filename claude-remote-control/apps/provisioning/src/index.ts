@@ -32,6 +32,14 @@ app.route('/api/flyio', flyioRoutes);
 app.route('/api/agents', agentsRoutes);
 app.route('/api/github', githubRoutes);
 
+// Catch-all: redirect any non-API requests to dashboard (handles OAuth error redirects)
+app.get('*', (c) => {
+  const url = new URL(c.req.url);
+  const dashboardUrl = new URL(config.dashboardUrl);
+  dashboardUrl.search = url.search; // Preserve query params like ?error=state_mismatch
+  return c.redirect(dashboardUrl.toString());
+});
+
 // Start server
 const port = config.port;
 
