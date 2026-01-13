@@ -129,6 +129,12 @@ export interface WSSessionInfo {
   // Git worktree isolation
   worktreePath?: string; // Path to worktree if session uses isolation
   branchName?: string; // Branch name for worktree session
+  // Spawn/orchestration (for sub-sessions)
+  parentSession?: string; // Name of parent session that spawned this one
+  taskId?: string; // Group ID for related spawned sessions
+  spawnPrompt?: string; // Original prompt used to spawn this session
+  exitCode?: number; // Exit code when session completed
+  exitedAt?: number; // Timestamp when session exited
 }
 
 // WebSocket message types - Client to Agent (Status channel)
@@ -141,7 +147,13 @@ export type WSStatusMessageFromAgent =
   | { type: 'session-removed'; sessionName: string }
   | { type: 'session-archived'; sessionName: string; session: WSSessionInfo }
   | { type: 'version-info'; agentVersion: string }
-  | { type: 'update-pending'; targetVersion: string; message: string };
+  | { type: 'update-pending'; targetVersion: string; message: string }
+  // Orchestration messages (for spawned sub-sessions)
+  | { type: 'session-spawned'; session: WSSessionInfo; parentSession?: string }
+  | { type: 'session-completed'; sessionName: string; exitCode: number };
+
+// Task status for orchestration (grouping spawned sessions)
+export type TaskStatus = 'pending' | 'running' | 'needs_attention' | 'completed' | 'failed';
 
 // API types
 export interface RegisterMachineRequest {
@@ -270,6 +282,53 @@ export interface ArchiveSessionResponse {
   success: boolean;
   message: string;
   session?: WSSessionInfo;
+}
+
+// Spawn session (for orchestration)
+export interface SpawnSessionRequest {
+  prompt: string; // Required - the task prompt for claude -p
+  project: string; // Required - project name from whitelist
+  parentSession?: string; // Parent session name for hierarchy tracking
+  taskId?: string; // Group ID for related spawned sessions
+  worktree?: boolean; // Create isolated git worktree
+  branchName?: string; // Custom branch name for worktree
+  environmentId?: string; // Environment to use (API keys, etc.)
+  timeout?: number; // Timeout in milliseconds
+  trustMode?: boolean; // Use --dangerously-skip-permissions
+  model?: string; // Model override (opus, sonnet, etc.)
+}
+
+export interface SpawnSessionResponse {
+  success: boolean;
+  sessionName?: string;
+  taskId?: string;
+  worktreePath?: string;
+  branchName?: string;
+  error?: string;
+  errorCode?: 'PROJECT_NOT_ALLOWED' | 'CAPACITY_EXCEEDED' | 'SPAWN_FAILED';
+}
+
+// Session output capture
+export interface SessionOutputResponse {
+  sessionName: string;
+  output: string;
+  totalLines: number;
+  returnedLines: number;
+  isRunning: boolean;
+  capturedAt: number;
+}
+
+// Session input
+export interface SessionInputRequest {
+  text: string;
+  sendEnter?: boolean; // Default true
+}
+
+export interface SessionInputResponse {
+  success: boolean;
+  sessionName?: string;
+  bytesSent?: number;
+  error?: string;
 }
 
 // Hook status notification (from Claude Code plugin)

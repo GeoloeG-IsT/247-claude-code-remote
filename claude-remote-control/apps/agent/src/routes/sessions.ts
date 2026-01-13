@@ -4,15 +4,23 @@
 
 import { Router } from 'express';
 import type { SessionStatus, AttentionReason, WSSessionInfo } from '247-shared';
-import { tmuxSessionStatus, broadcastSessionRemoved, broadcastSessionArchived } from '../status.js';
+import {
+  tmuxSessionStatus,
+  broadcastSessionRemoved,
+  broadcastSessionArchived,
+  broadcastStatusUpdate,
+  generateSessionName,
+} from '../status.js';
 import * as sessionsDb from '../db/sessions.js';
 import {
   getEnvironmentMetadata,
   getSessionEnvironment,
   clearSessionEnvironment,
+  setSessionEnvironment,
 } from '../db/environments.js';
 import { executionManager, worktreeManager } from '../services/index.js';
 import { config } from '../config.js';
+import { createTerminal } from '../terminal.js';
 
 export function createSessionRoutes(): Router {
   const router = Router();
@@ -21,6 +29,274 @@ export function createSessionRoutes(): Router {
   router.get('/capacity', (_req, res) => {
     const capacity = executionManager.getCapacity();
     res.json(capacity);
+  });
+
+  // Spawn a new session with a command (for claude -p)
+  router.post('/spawn', async (req, res) => {
+    const {
+      prompt,
+      project,
+      parentSession,
+      taskId,
+      worktree,
+      branchName,
+      environmentId,
+      timeout: _timeout,
+      trustMode,
+      model,
+    } = req.body as {
+      prompt: string;
+      project: string;
+      parentSession?: string;
+      taskId?: string;
+      worktree?: boolean;
+      branchName?: string;
+      environmentId?: string;
+      timeout?: number;
+      trustMode?: boolean;
+      model?: string;
+    };
+
+    // Validate required fields
+    if (!prompt || typeof prompt !== 'string') {
+      return res.status(400).json({ success: false, error: 'Prompt is required' });
+    }
+    if (!project || typeof project !== 'string') {
+      return res.status(400).json({ success: false, error: 'Project is required' });
+    }
+
+    // Validate project is in whitelist
+    if (!config.projects.whitelist.includes(project)) {
+      return res.status(400).json({
+        success: false,
+        error: `Project "${project}" is not in whitelist`,
+        errorCode: 'PROJECT_NOT_ALLOWED',
+      });
+    }
+
+    // Check capacity
+    if (!executionManager.canStart()) {
+      return res.status(429).json({
+        success: false,
+        error: 'Maximum parallel sessions reached',
+        errorCode: 'CAPACITY_EXCEEDED',
+      });
+    }
+
+    // Generate session name with spawn prefix
+    const sessionName = generateSessionName(project, 'spawn');
+
+    // Resolve project path
+    const projectPath = `${config.projects.basePath}/${project}`.replace('~', process.env.HOME!);
+
+    try {
+      // Create worktree if requested
+      let worktreePath: string | undefined;
+      let actualBranchName: string | undefined;
+
+      if (worktree) {
+        const worktreeResult = await worktreeManager.create(projectPath, sessionName, branchName);
+        if (worktreeResult) {
+          worktreePath = worktreeResult.worktreePath;
+          actualBranchName = worktreeResult.branch;
+        }
+      }
+
+      // Build claude command
+      const flags: string[] = [];
+      if (trustMode) {
+        flags.push('--dangerously-skip-permissions');
+      }
+      if (model) {
+        flags.push('--model', model);
+      }
+
+      // Sanitize prompt for shell
+      const sanitizedPrompt = prompt
+        .replace(/'/g, "'\\''") // Escape single quotes
+        .replace(/\\/g, '\\\\'); // Escape backslashes
+
+      const spawnCommand = `claude ${flags.join(' ')} -p '${sanitizedPrompt}'`.trim();
+
+      // Get custom env vars from environment if specified
+      const customEnvVars: Record<string, string> = {};
+      if (environmentId) {
+        setSessionEnvironment(sessionName, environmentId);
+        // Environment variables will be loaded from the environment settings
+      }
+
+      // Create terminal with spawn command
+      const cwd = worktreePath || projectPath;
+      const terminal = createTerminal(cwd, sessionName, {
+        customEnvVars,
+        spawnCommand,
+      });
+
+      // Register with execution manager
+      executionManager.register(sessionName, project, worktreePath ?? null);
+
+      // Create DB entry
+      sessionsDb.upsertSession(sessionName, {
+        project,
+        status: 'init',
+        lastEvent: 'Spawned',
+        worktreePath,
+        branchName: actualBranchName,
+        spawn_prompt: prompt.substring(0, 1000), // Truncate for storage
+        parent_session: parentSession,
+        task_id: taskId,
+      });
+
+      // Set up exit handler
+      terminal.onExit(({ exitCode }) => {
+        console.log(`[Spawn] Session ${sessionName} exited with code ${exitCode}`);
+        sessionsDb.upsertSession(sessionName, {
+          status: 'idle',
+          lastEvent: `Exited (${exitCode})`,
+          exit_code: exitCode,
+          exited_at: Date.now(),
+        });
+        executionManager.unregister(sessionName);
+      });
+
+      // Broadcast status
+      const sessionInfo: WSSessionInfo = {
+        name: sessionName,
+        project,
+        createdAt: Date.now(),
+        status: 'init',
+        statusSource: 'hook',
+        lastEvent: 'Spawned',
+        worktreePath,
+        branchName: actualBranchName,
+      };
+      broadcastStatusUpdate(sessionInfo);
+
+      res.json({
+        success: true,
+        sessionName,
+        taskId,
+        worktreePath,
+        branchName: actualBranchName,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`[Spawn] Failed to spawn session:`, errorMessage);
+      res.status(500).json({
+        success: false,
+        error: `Failed to spawn session: ${errorMessage}`,
+      });
+    }
+  });
+
+  // Get session output (terminal scrollback)
+  router.get('/:sessionName/output', async (req, res) => {
+    const { sessionName } = req.params;
+    const lines = parseInt(req.query.lines as string) || 1000;
+    const format = (req.query.format as string) || 'plain';
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execAsync = promisify(exec);
+
+    if (!/^[\w-]+$/.test(sessionName)) {
+      return res.status(400).json({ error: 'Invalid session name' });
+    }
+
+    // Limit lines to prevent memory issues
+    const maxLines = Math.min(lines, 50000);
+
+    try {
+      const { stdout } = await execAsync(
+        `tmux capture-pane -t "${sessionName}" -p -S -${maxLines} -J 2>/dev/null`
+      );
+
+      let output = stdout;
+
+      // Strip ANSI codes if plain format requested
+      if (format === 'plain') {
+        // eslint-disable-next-line no-control-regex
+        output = output.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
+      }
+
+      const outputLines = output.split('\n');
+
+      // Check if session is still running
+      let isRunning = true;
+      try {
+        await execAsync(`tmux has-session -t "${sessionName}" 2>/dev/null`);
+      } catch {
+        isRunning = false;
+      }
+
+      res.json({
+        sessionName,
+        output,
+        totalLines: outputLines.length,
+        returnedLines: outputLines.length,
+        isRunning,
+        capturedAt: Date.now(),
+      });
+    } catch {
+      res.status(404).json({ error: 'Session not found' });
+    }
+  });
+
+  // Send input to a session
+  router.post('/:sessionName/input', async (req, res) => {
+    const { sessionName } = req.params;
+    const { text, sendEnter = true } = req.body as {
+      text: string;
+      sendEnter?: boolean;
+    };
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execAsync = promisify(exec);
+
+    if (!/^[\w-]+$/.test(sessionName)) {
+      return res.status(400).json({ success: false, error: 'Invalid session name' });
+    }
+
+    if (!text || typeof text !== 'string') {
+      return res.status(400).json({ success: false, error: 'Text is required' });
+    }
+
+    try {
+      // Check if session exists
+      await execAsync(`tmux has-session -t "${sessionName}" 2>/dev/null`);
+
+      // Escape special characters for tmux send-keys
+      const escapedText = text.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/;/g, '\\;');
+
+      // Send the text
+      if (sendEnter) {
+        await execAsync(`tmux send-keys -t "${sessionName}" "${escapedText}" Enter`);
+      } else {
+        await execAsync(`tmux send-keys -t "${sessionName}" "${escapedText}"`);
+      }
+
+      // If session was waiting for input, update status
+      const hookData = tmuxSessionStatus.get(sessionName);
+      if (hookData?.status === 'needs_attention') {
+        hookData.status = 'working';
+        hookData.attentionReason = undefined;
+        hookData.lastEvent = 'Input sent';
+        hookData.lastActivity = Date.now();
+
+        sessionsDb.upsertSession(sessionName, {
+          status: 'working',
+          attentionReason: null,
+          lastEvent: 'Input sent',
+        });
+      }
+
+      res.json({
+        success: true,
+        sessionName,
+        bytesSent: text.length,
+      });
+    } catch {
+      res.status(404).json({ success: false, error: 'Session not found' });
+    }
   });
 
   // Enhanced sessions endpoint with detailed info

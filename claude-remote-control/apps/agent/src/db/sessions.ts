@@ -62,20 +62,22 @@ export function upsertSession(name: string, input: UpsertSessionInput): DbSessio
       last_activity, last_status_change, environment_id, created_at, updated_at,
       model, cost_usd, context_usage, lines_added, lines_removed,
       ralph_enabled, ralph_config, ralph_iteration, ralph_status,
-      worktree_path, branch_name
+      worktree_path, branch_name,
+      spawn_prompt, parent_session, task_id, exit_code, exited_at
     )
     VALUES (
       @name, @project, @status, @attentionReason, @lastEvent,
       @lastActivity, @lastStatusChange, @environmentId, @createdAt, @updatedAt,
       @model, @costUsd, @contextUsage, @linesAdded, @linesRemoved,
       @ralphEnabled, @ralphConfig, @ralphIteration, @ralphStatus,
-      @worktreePath, @branchName
+      @worktreePath, @branchName,
+      @spawnPrompt, @parentSession, @taskId, @exitCode, @exitedAt
     )
     ON CONFLICT(name) DO UPDATE SET
-      status = @status,
+      status = COALESCE(@status, status),
       attention_reason = @attentionReason,
-      last_event = @lastEvent,
-      last_activity = @lastActivity,
+      last_event = COALESCE(@lastEvent, last_event),
+      last_activity = COALESCE(@lastActivity, last_activity),
       last_status_change = @lastStatusChange,
       environment_id = COALESCE(@environmentId, environment_id),
       updated_at = @updatedAt,
@@ -89,16 +91,21 @@ export function upsertSession(name: string, input: UpsertSessionInput): DbSessio
       ralph_iteration = COALESCE(@ralphIteration, ralph_iteration),
       ralph_status = COALESCE(@ralphStatus, ralph_status),
       worktree_path = COALESCE(@worktreePath, worktree_path),
-      branch_name = COALESCE(@branchName, branch_name)
+      branch_name = COALESCE(@branchName, branch_name),
+      spawn_prompt = COALESCE(@spawnPrompt, spawn_prompt),
+      parent_session = COALESCE(@parentSession, parent_session),
+      task_id = COALESCE(@taskId, task_id),
+      exit_code = COALESCE(@exitCode, exit_code),
+      exited_at = COALESCE(@exitedAt, exited_at)
   `);
 
   stmt.run({
     name,
-    project: input.project,
-    status: input.status,
+    project: input.project ?? existing?.project ?? 'unknown',
+    status: input.status ?? existing?.status ?? 'init',
     attentionReason: input.attentionReason ?? null,
     lastEvent: input.lastEvent ?? null,
-    lastActivity: input.lastActivity,
+    lastActivity: input.lastActivity ?? now,
     lastStatusChange: statusChanged ? now : (existing?.last_status_change ?? now),
     environmentId: input.environmentId ?? null,
     createdAt: existing?.created_at ?? now,
@@ -114,10 +121,15 @@ export function upsertSession(name: string, input: UpsertSessionInput): DbSessio
     ralphStatus: input.ralphStatus ?? null,
     worktreePath: input.worktreePath ?? null,
     branchName: input.branchName ?? null,
+    spawnPrompt: input.spawn_prompt ?? null,
+    parentSession: input.parent_session ?? null,
+    taskId: input.task_id ?? null,
+    exitCode: input.exit_code ?? null,
+    exitedAt: input.exited_at ?? null,
   });
 
   // Record status history if status changed
-  if (statusChanged) {
+  if (statusChanged && input.status) {
     recordStatusChange(name, input.status, input.attentionReason ?? null, input.lastEvent ?? null);
   }
 

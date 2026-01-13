@@ -107,8 +107,10 @@ export function broadcastSessionArchived(sessionName: string, session: WSSession
 
 /**
  * Generate human-readable session names with project prefix
+ * @param project - Project name
+ * @param prefix - Optional prefix to add after project (e.g., 'spawn' -> project--spawn-adj-noun-num)
  */
-export function generateSessionName(project: string): string {
+export function generateSessionName(project: string, prefix?: string): string {
   const adjectives = [
     'brave',
     'swift',
@@ -125,6 +127,10 @@ export function generateSessionName(project: string): string {
   const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
   const noun = nouns[Math.floor(Math.random() * nouns.length)];
   const num = Math.floor(Math.random() * 100);
+
+  if (prefix) {
+    return `${project}--${prefix}-${adj}-${noun}-${num}`;
+  }
   return `${project}--${adj}-${noun}-${num}`;
 }
 

@@ -31,6 +31,12 @@ export interface DbSession {
   // Worktree isolation (v6)
   worktree_path: string | null;
   branch_name: string | null;
+  // Spawn/orchestration fields (v9)
+  spawn_prompt: string | null;
+  parent_session: string | null;
+  task_id: string | null;
+  exit_code: number | null;
+  exited_at: number | null;
 }
 
 export interface DbStatusHistory {
@@ -68,12 +74,12 @@ export interface DbSchemaVersion {
 // ============================================================================
 
 export interface UpsertSessionInput {
-  project: string;
-  status: SessionStatus;
+  project?: string;
+  status?: SessionStatus;
   attentionReason?: AttentionReason | null;
   lastEvent?: string | null;
-  lastActivity: number;
-  lastStatusChange: number;
+  lastActivity?: number;
+  lastStatusChange?: number;
   environmentId?: string | null;
   // StatusLine metrics
   model?: string | null;
@@ -89,6 +95,12 @@ export interface UpsertSessionInput {
   // Worktree isolation (v6)
   worktreePath?: string | null;
   branchName?: string | null;
+  // Spawn/orchestration fields (v9)
+  spawn_prompt?: string | null;
+  parent_session?: string | null;
+  task_id?: string | null;
+  exit_code?: number | null;
+  exited_at?: number | null;
 }
 
 export interface UpsertEnvironmentInput {
@@ -103,7 +115,7 @@ export interface UpsertEnvironmentInput {
 // SQL Schema Definitions
 // ============================================================================
 
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 export const CREATE_TABLES_SQL = `
 -- Sessions: current state of terminal sessions
@@ -133,13 +145,21 @@ CREATE TABLE IF NOT EXISTS sessions (
   ralph_status TEXT,
   -- Worktree isolation (v6)
   worktree_path TEXT,
-  branch_name TEXT
+  branch_name TEXT,
+  -- Spawn/orchestration fields (v9)
+  spawn_prompt TEXT,
+  parent_session TEXT,
+  task_id TEXT,
+  exit_code INTEGER,
+  exited_at INTEGER
 );
 
 CREATE INDEX IF NOT EXISTS idx_sessions_name ON sessions(name);
 CREATE INDEX IF NOT EXISTS idx_sessions_project ON sessions(project);
 CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
 CREATE INDEX IF NOT EXISTS idx_sessions_last_activity ON sessions(last_activity);
+CREATE INDEX IF NOT EXISTS idx_sessions_parent ON sessions(parent_session);
+CREATE INDEX IF NOT EXISTS idx_sessions_task ON sessions(task_id);
 
 -- Status history: audit trail of status changes
 CREATE TABLE IF NOT EXISTS status_history (

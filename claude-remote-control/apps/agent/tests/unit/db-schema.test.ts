@@ -25,8 +25,8 @@ describe('Database Schema', () => {
       expect(Number.isInteger(SCHEMA_VERSION)).toBe(true);
     });
 
-    it('current version is 8', () => {
-      expect(SCHEMA_VERSION).toBe(8);
+    it('current version is 9', () => {
+      expect(SCHEMA_VERSION).toBe(9);
     });
   });
 
@@ -229,6 +229,12 @@ describe('Database Schema', () => {
           // Worktree isolation
           worktree_path: null,
           branch_name: null,
+          // Spawn/orchestration fields (v9)
+          spawn_prompt: null,
+          parent_session: null,
+          task_id: null,
+          exit_code: null,
+          exited_at: null,
         };
 
         expect(session.id).toBe(1);
@@ -263,6 +269,11 @@ describe('Database Schema', () => {
             ralph_status: null,
             worktree_path: null,
             branch_name: null,
+            spawn_prompt: null,
+            parent_session: null,
+            task_id: null,
+            exit_code: null,
+            exited_at: null,
           };
 
           expect(session.attention_reason).toBe(reason);
@@ -297,6 +308,11 @@ describe('Database Schema', () => {
             ralph_status: null,
             worktree_path: null,
             branch_name: null,
+            spawn_prompt: null,
+            parent_session: null,
+            task_id: null,
+            exit_code: null,
+            exited_at: null,
           };
 
           expect(session.status).toBe(status);
@@ -328,6 +344,11 @@ describe('Database Schema', () => {
           ralph_status: null,
           worktree_path: null,
           branch_name: null,
+          spawn_prompt: null,
+          parent_session: null,
+          task_id: null,
+          exit_code: null,
+          exited_at: null,
         };
 
         expect(session.model).toBe('Opus 4.5');

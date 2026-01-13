@@ -26,6 +26,8 @@ export interface Terminal {
 export interface CreateTerminalOptions {
   /** Custom environment variables to inject into the session */
   customEnvVars?: Record<string, string>;
+  /** For spawned sessions - run this command directly instead of interactive shell */
+  spawnCommand?: string;
 }
 
 export function createTerminal(
@@ -34,10 +36,10 @@ export function createTerminal(
   options: CreateTerminalOptions | Record<string, string> = {}
 ): Terminal {
   // Support both old signature (customEnvVars object) and new options object
-  const { customEnvVars = {} } =
-    'customEnvVars' in options
+  const { customEnvVars = {}, spawnCommand } =
+    'customEnvVars' in options || 'spawnCommand' in options
       ? (options as CreateTerminalOptions)
-      : { customEnvVars: options as Record<string, string> };
+      : { customEnvVars: options as Record<string, string>, spawnCommand: undefined };
   // Check if session already exists before spawning
   let existingSession = false;
   try {
@@ -66,6 +68,26 @@ export function createTerminal(
 
   if (existingSession) {
     tmuxArgs = ['attach-session', '-t', sessionName];
+  } else if (spawnCommand) {
+    // Spawn mode: run command directly without init script (for claude -p)
+    console.log(`[Terminal] Spawn mode: running command directly`);
+
+    // Build environment variables for tmux -e flags
+    const envFlags: string[] = [
+      '-e',
+      `CLAUDE_TMUX_SESSION=${sessionName}`,
+      '-e',
+      `TERM=xterm-256color`,
+    ];
+
+    // Add custom env vars
+    for (const [key, value] of Object.entries(customEnvVars)) {
+      if (value && value.trim() !== '') {
+        envFlags.push('-e', `${key}=${value}`);
+      }
+    }
+
+    tmuxArgs = ['new-session', '-s', sessionName, '-c', cwd, ...envFlags, spawnCommand];
   } else {
     // Extract project name from cwd (last directory component)
     const projectName = path.basename(cwd) || 'unknown';
@@ -148,7 +170,8 @@ export function createTerminal(
   });
 
   // Track terminal readiness state for onReady callback
-  let isReady = existingSession; // Existing sessions are ready immediately
+  // Existing sessions and spawn mode are ready immediately
+  let isReady = existingSession || !!spawnCommand;
   const readyCallbacks: (() => void)[] = [];
 
   const fireReadyCallbacks = () => {
@@ -161,7 +184,14 @@ export function createTerminal(
   };
 
   // Handle session initialization and readiness
-  if (!existingSession) {
+  if (spawnCommand) {
+    // Spawn mode: command runs directly, ready immediately
+    console.log(`[Terminal] Spawn session '${sessionName}' ready (direct command)`);
+    // Enable mouse for tmux
+    setTimeout(() => {
+      exec(`tmux set-option -t "${sessionName}" mouse on`);
+    }, 100);
+  } else if (!existingSession) {
     // For new sessions, the init script handles env vars and tmux config
     // Fire ready callbacks once shell is likely initialized
     setTimeout(() => {

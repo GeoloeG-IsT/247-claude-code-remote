@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "247-orchestrator": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-server/dist/index.js"],
+      "env": {
+        "AGENT_247_URL": "${AGENT_247_URL:-http://localhost:4678}"
+      }
+    }
+  }
+}
