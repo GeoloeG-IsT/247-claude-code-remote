@@ -33,6 +33,9 @@ fi
 # Ensure proper ownership
 sudo chown -R quivr:quivr /home/quivr
 
+# Change to valid directory (cwd may be invalid after symlink replacement)
+cd /home/quivr/workspace
+
 echo "Persistent storage initialized"
 
 # =============================================================================
