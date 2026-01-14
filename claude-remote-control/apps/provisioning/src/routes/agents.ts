@@ -208,8 +208,8 @@ agentsRoutes.post('/', async (c) => {
       image: CLOUD_AGENT_IMAGE,
       guest: {
         cpu_kind: 'shared',
-        cpus: 1,
-        memory_mb: 1024,
+        cpus: 2,
+        memory_mb: 2048,
       },
       services: [
         {
