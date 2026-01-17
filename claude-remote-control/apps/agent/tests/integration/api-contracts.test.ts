@@ -9,12 +9,8 @@ import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { EventEmitter } from 'events';
 import type {
-  EnvironmentMetadata,
-  Environment,
   WSSessionInfo,
   ArchiveSessionResponse,
-  EnvironmentProvider,
-  EnvironmentIcon,
   SessionStatus,
   AttentionReason,
 } from '247-shared';
@@ -92,22 +88,6 @@ vi.mock('../../src/terminal.js', () => ({
 // ============================================================================
 // Type Guards for Response Validation
 // ============================================================================
-
-function isValidEnvironmentMetadata(obj: unknown): obj is EnvironmentMetadata {
-  if (typeof obj !== 'object' || obj === null) return false;
-  const env = obj as Record<string, unknown>;
-
-  return (
-    typeof env.id === 'string' &&
-    typeof env.name === 'string' &&
-    typeof env.provider === 'string' &&
-    ['anthropic', 'openrouter'].includes(env.provider as string) &&
-    typeof env.isDefault === 'boolean' &&
-    Array.isArray(env.variableKeys) &&
-    typeof env.createdAt === 'number' &&
-    typeof env.updatedAt === 'number'
-  );
-}
 
 function isValidWSSessionInfo(obj: unknown): obj is WSSessionInfo {
   if (typeof obj !== 'object' || obj === null) return false;
@@ -216,36 +196,6 @@ describe('API Response Contract Tests', () => {
     });
   });
 
-  describe('GET /api/environments', () => {
-    it('returns array of valid EnvironmentMetadata', async () => {
-      const res = await request(server).get('/api/environments');
-
-      expect(res.status).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
-
-      res.body.forEach((env: unknown) => {
-        expect(isValidEnvironmentMetadata(env)).toBe(true);
-      });
-    });
-
-    it('each environment has required metadata fields', async () => {
-      const res = await request(server).get('/api/environments');
-
-      expect(res.status).toBe(200);
-
-      res.body.forEach((env: EnvironmentMetadata) => {
-        expect(env.id).toBeDefined();
-        expect(env.name).toBeDefined();
-        expect(env.provider).toBeDefined();
-        expect(['anthropic', 'openrouter']).toContain(env.provider);
-        expect(typeof env.isDefault).toBe('boolean');
-        expect(Array.isArray(env.variableKeys)).toBe(true);
-        expect(typeof env.createdAt).toBe('number');
-        expect(typeof env.updatedAt).toBe('number');
-      });
-    });
-  });
-
   describe('POST /api/heartbeat', () => {
     it('accepts valid heartbeat with all fields', async () => {
       const res = await request(server)
@@ -342,7 +292,7 @@ describe('Error Response Contracts', () => {
   });
 
   it('returns 404 for missing resources', async () => {
-    const res = await request(server).get('/api/environments/non-existent-id');
+    const res = await request(server).get('/api/sessions/non-existent-session/status');
 
     expect(res.status).toBe(404);
     expect(typeof res.body.error).toBe('string');

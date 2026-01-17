@@ -29,18 +29,8 @@ vi.mock('../../src/db/schema.js', () => ({
       status TEXT NOT NULL,
       timestamp INTEGER NOT NULL
     );
-    CREATE TABLE IF NOT EXISTS environments (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      provider TEXT NOT NULL,
-      is_default INTEGER DEFAULT 0,
-      variables TEXT,
-      icon TEXT,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
   `,
-  SCHEMA_VERSION: 3,
+  SCHEMA_VERSION: 14,
   RETENTION_CONFIG: {
     activeSessionMaxAge: 24 * 60 * 60 * 1000,
     archivedSessionMaxAge: 30 * 24 * 60 * 60 * 1000,
@@ -107,7 +97,6 @@ describe('Database Index', () => {
       expect(tableNames).toContain('schema_version');
       expect(tableNames).toContain('sessions');
       expect(tableNames).toContain('status_history');
-      expect(tableNames).toContain('environments');
     });
 
     it('sets schema version', async () => {
@@ -119,7 +108,7 @@ describe('Database Index', () => {
         .prepare('SELECT version FROM schema_version ORDER BY version DESC LIMIT 1')
         .get() as { version: number };
 
-      expect(version.version).toBe(3);
+      expect(version.version).toBe(14);
     });
   });
 
@@ -168,18 +157,10 @@ describe('Database Index', () => {
       `
       ).run();
 
-      db.prepare(
-        `
-        INSERT INTO environments (id, name, provider, created_at, updated_at)
-        VALUES ('env1', 'Default', 'anthropic', ${Date.now()}, ${Date.now()})
-      `
-      ).run();
-
       const stats = getDatabaseStats();
 
       expect(stats.sessions).toBe(1);
       expect(stats.history).toBe(1);
-      expect(stats.environments).toBe(1);
     });
 
     it('returns zeros for empty database', async () => {
@@ -191,106 +172,6 @@ describe('Database Index', () => {
 
       expect(stats.sessions).toBe(0);
       expect(stats.history).toBe(0);
-      expect(stats.environments).toBe(0);
-    });
-  });
-
-  describe('migrateEnvironmentsFromJson', () => {
-    it('returns false if environments.json does not exist', async () => {
-      const { existsSync } = await import('fs');
-      vi.mocked(existsSync).mockReturnValue(false);
-
-      const { initTestDatabase, migrateEnvironmentsFromJson } =
-        await import('../../src/db/index.js');
-
-      const db = initTestDatabase();
-      const result = migrateEnvironmentsFromJson(db);
-
-      expect(result).toBe(false);
-    });
-
-    it('returns false if environments table already has data', async () => {
-      const { existsSync } = await import('fs');
-      vi.mocked(existsSync).mockReturnValue(true);
-
-      const { initTestDatabase, migrateEnvironmentsFromJson } =
-        await import('../../src/db/index.js');
-
-      const db = initTestDatabase();
-
-      // Insert existing data
-      db.prepare(
-        `
-        INSERT INTO environments (id, name, provider, created_at, updated_at)
-        VALUES ('existing', 'Existing', 'anthropic', ${Date.now()}, ${Date.now()})
-      `
-      ).run();
-
-      const result = migrateEnvironmentsFromJson(db);
-
-      expect(result).toBe(false);
-    });
-
-    it('migrates environments from JSON file', async () => {
-      const { existsSync, readFileSync } = await import('fs');
-
-      const mockEnvironments = [
-        {
-          id: 'env1',
-          name: 'Claude',
-          provider: 'anthropic',
-          isDefault: true,
-          variables: { ANTHROPIC_API_KEY: 'key1' },
-          createdAt: 1000,
-          updatedAt: 2000,
-        },
-        {
-          id: 'env2',
-          name: 'OpenAI',
-          provider: 'openai',
-          isDefault: false,
-          variables: { OPENAI_API_KEY: 'key2' },
-          createdAt: 1500,
-          updatedAt: 2500,
-        },
-      ];
-
-      vi.mocked(existsSync).mockReturnValue(true);
-      vi.mocked(readFileSync).mockReturnValue(JSON.stringify(mockEnvironments));
-
-      const { initTestDatabase, migrateEnvironmentsFromJson } =
-        await import('../../src/db/index.js');
-
-      const db = initTestDatabase();
-      const result = migrateEnvironmentsFromJson(db);
-
-      expect(result).toBe(true);
-
-      // Verify data was inserted
-      const count = db.prepare('SELECT COUNT(*) as count FROM environments').get() as {
-        count: number;
-      };
-      expect(count.count).toBe(2);
-
-      const env1 = db.prepare('SELECT * FROM environments WHERE id = ?').get('env1') as any;
-      expect(env1.name).toBe('Claude');
-      expect(env1.provider).toBe('anthropic');
-      expect(env1.is_default).toBe(1);
-    });
-
-    it('returns false on JSON parse error', async () => {
-      const { existsSync, readFileSync } = await import('fs');
-
-      vi.mocked(existsSync).mockReturnValue(true);
-      vi.mocked(readFileSync).mockReturnValue('invalid json {');
-
-      const { initTestDatabase, migrateEnvironmentsFromJson } =
-        await import('../../src/db/index.js');
-
-      const db = initTestDatabase();
-      const result = migrateEnvironmentsFromJson(db);
-
-      expect(result).toBe(false);
     });
   });
 
@@ -299,13 +180,6 @@ describe('Database Index', () => {
       const { initTestDatabase } = await import('../../src/db/index.js');
 
       const db = initTestDatabase();
-
-      // Check environments table has icon column
-      const envColumns = db.pragma('table_info(environments)') as Array<{ name: string }>;
-      const envColumnNames = envColumns.map((c) => c.name);
-      expect(envColumnNames).toContain('icon');
-      expect(envColumnNames).toContain('variables');
-      expect(envColumnNames).toContain('is_default');
 
       // Check sessions table has archived_at column
       const sessionColumns = db.pragma('table_info(sessions)') as Array<{ name: string }>;

@@ -11,11 +11,8 @@ import {
   RETENTION_CONFIG,
   type DbSession,
   type DbStatusHistory,
-  type DbEnvironment,
-  type DbSessionEnvironment,
   type DbSchemaVersion,
   type UpsertSessionInput,
-  type UpsertEnvironmentInput,
 } from '../../src/db/schema.js';
 
 describe('Database Schema', () => {
@@ -25,8 +22,8 @@ describe('Database Schema', () => {
       expect(Number.isInteger(SCHEMA_VERSION)).toBe(true);
     });
 
-    it('current version is 13', () => {
-      expect(SCHEMA_VERSION).toBe(13);
+    it('current version is 14', () => {
+      expect(SCHEMA_VERSION).toBe(14);
     });
   });
 
@@ -81,14 +78,6 @@ describe('Database Schema', () => {
       expect(CREATE_TABLES_SQL).toContain('CREATE TABLE IF NOT EXISTS status_history');
     });
 
-    it('creates environments table', () => {
-      expect(CREATE_TABLES_SQL).toContain('CREATE TABLE IF NOT EXISTS environments');
-    });
-
-    it('creates session_environments table', () => {
-      expect(CREATE_TABLES_SQL).toContain('CREATE TABLE IF NOT EXISTS session_environments');
-    });
-
     it('creates schema_version table', () => {
       expect(CREATE_TABLES_SQL).toContain('CREATE TABLE IF NOT EXISTS schema_version');
     });
@@ -123,8 +112,6 @@ describe('Database Schema', () => {
       const tableNames = tables.map((t) => t.name);
       expect(tableNames).toContain('sessions');
       expect(tableNames).toContain('status_history');
-      expect(tableNames).toContain('environments');
-      expect(tableNames).toContain('session_environments');
       expect(tableNames).toContain('schema_version');
 
       db.close();
@@ -145,7 +132,6 @@ describe('Database Schema', () => {
       expect(columnNames).toContain('last_event');
       expect(columnNames).toContain('last_activity');
       expect(columnNames).toContain('last_status_change');
-      expect(columnNames).toContain('environment_id');
       expect(columnNames).toContain('archived_at');
       expect(columnNames).toContain('created_at');
       expect(columnNames).toContain('updated_at');
@@ -178,25 +164,6 @@ describe('Database Schema', () => {
 
       db.close();
     });
-
-    it('environments table has all required columns', () => {
-      const db = new Database(':memory:');
-      db.exec(CREATE_TABLES_SQL);
-
-      const columns = db.pragma('table_info(environments)') as Array<{ name: string }>;
-      const columnNames = columns.map((c) => c.name);
-
-      expect(columnNames).toContain('id');
-      expect(columnNames).toContain('name');
-      expect(columnNames).toContain('provider');
-      expect(columnNames).toContain('icon');
-      expect(columnNames).toContain('is_default');
-      expect(columnNames).toContain('variables');
-      expect(columnNames).toContain('created_at');
-      expect(columnNames).toContain('updated_at');
-
-      db.close();
-    });
   });
 
   describe('Type definitions', () => {
@@ -211,7 +178,6 @@ describe('Database Schema', () => {
           last_event: 'PreToolUse',
           last_activity: Date.now(),
           last_status_change: Date.now(),
-          environment_id: null,
           archived_at: null,
           created_at: Date.now(),
           updated_at: Date.now(),
@@ -252,7 +218,6 @@ describe('Database Schema', () => {
             last_event: null,
             last_activity: Date.now(),
             last_status_change: Date.now(),
-            environment_id: null,
             archived_at: null,
             created_at: Date.now(),
             updated_at: Date.now(),
@@ -289,7 +254,6 @@ describe('Database Schema', () => {
             last_event: null,
             last_activity: Date.now(),
             last_status_change: Date.now(),
-            environment_id: null,
             archived_at: null,
             created_at: Date.now(),
             updated_at: Date.now(),
@@ -367,55 +331,6 @@ describe('Database Schema', () => {
       });
     });
 
-    describe('DbEnvironment', () => {
-      it('validates correct environment structure', () => {
-        const env: DbEnvironment = {
-          id: 'env-123',
-          name: 'Production',
-          provider: 'anthropic',
-          icon: 'zap',
-          is_default: 1,
-          variables: JSON.stringify({ ANTHROPIC_API_KEY: 'key' }),
-          created_at: Date.now(),
-          updated_at: Date.now(),
-        };
-
-        expect(env.provider).toBe('anthropic');
-        expect(env.is_default).toBe(1);
-      });
-
-      it('validates all providers', () => {
-        const providers = ['anthropic', 'openrouter'] as const;
-
-        providers.forEach((provider) => {
-          const env: DbEnvironment = {
-            id: 'env-123',
-            name: 'Test',
-            provider: provider,
-            icon: null,
-            is_default: 0,
-            variables: '{}',
-            created_at: Date.now(),
-            updated_at: Date.now(),
-          };
-
-          expect(env.provider).toBe(provider);
-        });
-      });
-    });
-
-    describe('DbSessionEnvironment', () => {
-      it('validates correct mapping structure', () => {
-        const mapping: DbSessionEnvironment = {
-          session_name: 'test--session-1',
-          environment_id: 'env-123',
-        };
-
-        expect(mapping.session_name).toBe('test--session-1');
-        expect(mapping.environment_id).toBe('env-123');
-      });
-    });
-
     describe('DbSchemaVersion', () => {
       it('validates correct version structure', () => {
         const version: DbSchemaVersion = {
@@ -449,27 +364,9 @@ describe('Database Schema', () => {
           lastEvent: 'PreToolUse',
           lastActivity: Date.now(),
           lastStatusChange: Date.now(),
-          environmentId: 'env-123',
         };
 
         expect(input.attentionReason).toBe('permission');
-        expect(input.environmentId).toBe('env-123');
-      });
-    });
-
-    describe('UpsertEnvironmentInput', () => {
-      it('validates correct input structure', () => {
-        const input: UpsertEnvironmentInput = {
-          id: 'env-123',
-          name: 'Production',
-          provider: 'anthropic',
-          isDefault: true,
-          variables: { ANTHROPIC_API_KEY: 'key' },
-        };
-
-        expect(input.name).toBe('Production');
-        expect(input.isDefault).toBe(true);
-        expect(input.variables.ANTHROPIC_API_KEY).toBe('key');
       });
     });
   });
@@ -495,54 +392,6 @@ describe('Database Schema', () => {
           VALUES (?, ?, ?, ?, ?, ?, ?)
         `
         ).run('unique-name', 'test', 'init', now, now, now, now);
-      }).toThrow();
-
-      db.close();
-    });
-
-    it('environments.id is primary key', () => {
-      const db = new Database(':memory:');
-      db.exec(CREATE_TABLES_SQL);
-
-      const now = Date.now();
-
-      db.prepare(
-        `
-        INSERT INTO environments (id, name, provider, variables, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `
-      ).run('env-1', 'Test', 'anthropic', '{}', now, now);
-
-      expect(() => {
-        db.prepare(
-          `
-          INSERT INTO environments (id, name, provider, variables, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `
-        ).run('env-1', 'Another', 'openrouter', '{}', now, now);
-      }).toThrow();
-
-      db.close();
-    });
-
-    it('session_environments.session_name is primary key', () => {
-      const db = new Database(':memory:');
-      db.exec(CREATE_TABLES_SQL);
-
-      db.prepare(
-        `
-        INSERT INTO session_environments (session_name, environment_id)
-        VALUES (?, ?)
-      `
-      ).run('session-1', 'env-1');
-
-      expect(() => {
-        db.prepare(
-          `
-          INSERT INTO session_environments (session_name, environment_id)
-          VALUES (?, ?)
-        `
-        ).run('session-1', 'env-2');
       }).toThrow();
 
       db.close();
