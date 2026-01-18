@@ -1,20 +1,27 @@
-import { createAuthServer, neonAuth, authApiHandler } from '@neondatabase/auth/next/server';
-
 // Lazy initialization to avoid errors during build when env vars aren't available
-let _authServer: ReturnType<typeof createAuthServer> | null = null;
+// All imports are dynamic to prevent module evaluation at build time
 
-export function getAuthServer() {
+type AuthServer = Awaited<
+  ReturnType<typeof import('@neondatabase/auth/next/server').createAuthServer>
+>;
+
+let _authServer: AuthServer | null = null;
+
+export async function getAuthServer(): Promise<AuthServer> {
   if (!_authServer) {
+    const { createAuthServer } = await import('@neondatabase/auth/next/server');
     _authServer = createAuthServer();
   }
   return _authServer;
 }
 
-// For backwards compatibility - will throw at runtime if env vars missing
-export const authServer = new Proxy({} as ReturnType<typeof createAuthServer>, {
-  get(_target, prop) {
-    return getAuthServer()[prop as keyof ReturnType<typeof createAuthServer>];
-  },
-});
+// Re-export helpers that require dynamic import
+export async function getNeonAuth() {
+  const { neonAuth } = await import('@neondatabase/auth/next/server');
+  return neonAuth;
+}
 
-export { neonAuth, authApiHandler };
+export async function getAuthApiHandler() {
+  const { authApiHandler } = await import('@neondatabase/auth/next/server');
+  return authApiHandler;
+}
