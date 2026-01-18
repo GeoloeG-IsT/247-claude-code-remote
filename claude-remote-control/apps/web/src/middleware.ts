@@ -1,4 +1,3 @@
-import { neonAuthMiddleware } from '@neondatabase/auth/next/server';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -7,6 +6,8 @@ export default async function middleware(request: NextRequest) {
 
   // Handle OAuth callback token exchange
   if (searchParams.has('neon_auth_session_verifier')) {
+    // Dynamic import to avoid build-time env var requirement
+    const { neonAuthMiddleware } = await import('@neondatabase/auth/next/server');
     const callbackMiddleware = neonAuthMiddleware({
       loginUrl: '/__neon_auth_never_match__',
     });
