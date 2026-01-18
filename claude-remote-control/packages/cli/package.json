@@ -15,12 +15,12 @@
   "author": "Quivr",
   "repository": {
     "type": "git",
-    "url": "https://github.com/QuivrHQ/247",
+    "url": "https://github.com/QuivrHQ/247-claude-code-remote",
     "directory": "packages/cli"
   },
   "homepage": "https://247.quivr.com",
   "bugs": {
-    "url": "https://github.com/QuivrHQ/247/issues"
+    "url": "https://github.com/QuivrHQ/247-claude-code-remote/issues"
   },
   "type": "module",
   "engines": {

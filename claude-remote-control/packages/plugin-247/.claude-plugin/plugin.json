@@ -5,7 +5,7 @@
   "author": {
     "name": "247 Team"
   },
-  "repository": "https://github.com/QuivrHQ/247",
+  "repository": "https://github.com/QuivrHQ/247-claude-code-remote",
   "license": "MIT",
   "keywords": ["multi-agent", "parallel", "orchestration", "spawn", "247"],
   "commands": "./commands/",

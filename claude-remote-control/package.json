@@ -23,10 +23,10 @@
   "homepage": "https://247.quivr.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/QuivrHQ/247"
+    "url": "https://github.com/QuivrHQ/247-claude-code-remote"
   },
   "bugs": {
-    "url": "https://github.com/QuivrHQ/247/issues"
+    "url": "https://github.com/QuivrHQ/247-claude-code-remote/issues"
   },
   "packageManager": "pnpm@9.15.1",
   "engines": {
