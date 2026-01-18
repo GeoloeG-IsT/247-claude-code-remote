@@ -101,6 +101,43 @@
   .xterm-viewport::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.25);
   }
+
+  /* xterm.js accessibility layer for mobile text selection */
+  /* screenReaderMode creates a DOM overlay with real selectable text */
+  .xterm-accessibility {
+    /* Allow pointer events through to accessibility layer on touch devices */
+    pointer-events: none;
+  }
+
+  .xterm-accessibility-tree {
+    /* Enable native text selection in the accessibility tree */
+    user-select: text !important;
+    -webkit-user-select: text !important;
+  }
+
+  /* On mobile/touch devices, allow touch events through to accessibility layer for selection */
+  @media (pointer: coarse) {
+    .xterm-accessibility {
+      pointer-events: auto;
+    }
+
+    /* Ensure the accessibility tree text remains selectable */
+    .xterm-accessibility-tree {
+      user-select: text !important;
+      -webkit-user-select: text !important;
+      /* Improve text visibility for selection */
+      color: transparent;
+    }
+
+    /* Style the selection highlight on mobile */
+    .xterm-accessibility-tree::selection {
+      background: rgba(249, 115, 22, 0.4); /* Orange selection to match theme */
+    }
+
+    .xterm-accessibility-tree::-moz-selection {
+      background: rgba(249, 115, 22, 0.4);
+    }
+  }
 }
 
 @layer utilities {

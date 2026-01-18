@@ -65,6 +65,7 @@ export function Terminal({
     searchAddonRef,
     scrollToBottom,
     copySelection,
+    hasSelection,
     startClaude,
     sendInput,
     triggerResize,
@@ -79,6 +80,33 @@ export function Terminal({
     onCopySuccess: handleCopySuccess,
     isMobile,
   });
+
+  // Track selection state for mobile copy button
+  const [selectionActive, setSelectionActive] = useState(false);
+
+  // Poll for selection changes on mobile (xterm.js doesn't have a selection change event)
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const checkSelection = () => {
+      setSelectionActive(hasSelection());
+    };
+
+    // Check selection periodically and on pointer events
+    const interval = setInterval(checkSelection, 200);
+
+    // Also check on pointerup to catch selection end
+    const handlePointerUp = () => {
+      // Small delay to let xterm.js update selection state
+      setTimeout(checkSelection, 50);
+    };
+    window.addEventListener('pointerup', handlePointerUp);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, [isMobile, hasSelection]);
 
   const {
     searchVisible,
@@ -148,7 +176,12 @@ export function Terminal({
       {isMobile && (
         <>
           <KeybarToggleButton isVisible={keybarVisible} onToggle={toggleKeybar} />
-          <MobileKeybar onKeyPress={sendInput} visible={keybarVisible} />
+          <MobileKeybar
+            onKeyPress={sendInput}
+            visible={keybarVisible}
+            onCopy={copySelection}
+            hasSelection={selectionActive}
+          />
         </>
       )}
     </div>
