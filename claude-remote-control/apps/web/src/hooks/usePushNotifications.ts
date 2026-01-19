@@ -101,7 +101,9 @@ export function usePushNotifications() {
 
     try {
       // Request notification permission
+      console.log('[Push] Requesting permission...');
       const permission = await Notification.requestPermission();
+      console.log('[Push] Permission result:', permission);
       if (permission !== 'granted') {
         setState((s) => ({
           ...s,
@@ -113,18 +115,31 @@ export function usePushNotifications() {
       }
 
       // Get VAPID public key
+      console.log('[Push] Fetching VAPID key...');
       const vapidResponse = await fetch('/api/push/vapid-key');
       if (!vapidResponse.ok) {
         throw new Error('Failed to get VAPID key');
       }
       const { publicKey } = await vapidResponse.json();
+      console.log('[Push] Got VAPID key');
 
-      // Subscribe to push
-      const registration = await navigator.serviceWorker.ready;
+      // Wait for service worker with timeout
+      console.log('[Push] Waiting for service worker...');
+      const swReadyPromise = navigator.serviceWorker.ready;
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error('Service worker timeout - try refreshing the page')),
+          10000
+        )
+      );
+      const registration = await Promise.race([swReadyPromise, timeoutPromise]);
+      console.log('[Push] Service worker ready');
+      console.log('[Push] Subscribing to push manager...');
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey),
       });
+      console.log('[Push] Subscribed to push manager');
 
       // Send subscription to server
       const response = await fetch('/api/push/subscribe', {
