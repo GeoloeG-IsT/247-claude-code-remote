@@ -18,7 +18,9 @@ export function SelectFolderTab({
   return (
     <div className="space-y-5">
       <div>
-        <label className="mb-3 block text-sm font-medium text-white/60">Select Project</label>
+        <span id="project-selector-label" className="mb-3 block text-sm font-medium text-white/60">
+          Select Project
+        </span>
         <ProjectDropdown
           folders={folders}
           selectedProject={selectedProject}

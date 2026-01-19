@@ -89,6 +89,9 @@ export function NewSessionModal({
           />
 
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="new-session-title"
             initial={{ scale: 0.95, opacity: 0, y: 10 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
@@ -106,15 +109,18 @@ export function NewSessionModal({
                   <Plus className="h-5 w-5 text-orange-400" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-white">New Session</h2>
+                  <h2 id="new-session-title" className="text-lg font-semibold text-white">
+                    New Session
+                  </h2>
                   <p className="text-sm text-white/40">Select a machine and project</p>
                 </div>
               </div>
               <button
                 onClick={() => onOpenChange(false)}
-                className="rounded-lg p-2 text-white/40 transition-colors hover:bg-white/5 hover:text-white"
+                aria-label="Close"
+                className="rounded-lg p-2 text-white/40 transition-colors hover:bg-white/5 hover:text-white focus-visible:ring-1 focus-visible:ring-orange-500/50"
               >
-                <X className="h-5 w-5" />
+                <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
 

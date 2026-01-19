@@ -70,12 +70,12 @@ export function Toolbar({
             disabled={!connected}
             className={cn(
               'flex touch-manipulation items-center justify-center gap-2 rounded-lg font-medium transition-all',
-              isMobile ? 'min-h-[40px] min-w-[40px] p-2' : 'px-3 py-1.5 text-sm',
+              isMobile ? 'min-h-[44px] min-w-[44px] p-2' : 'px-3 py-1.5 text-sm',
               connected
                 ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/20 hover:from-orange-400 hover:to-amber-400'
                 : 'cursor-not-allowed bg-white/5 text-white/30'
             )}
-            title="Start Claude"
+            aria-label="Start Claude"
           >
             <Sparkles className={isMobile ? 'h-5 w-5' : 'h-4 w-4'} />
             {!isMobile && <span>Start Claude</span>}
@@ -88,9 +88,9 @@ export function Toolbar({
           className={cn(
             'touch-manipulation rounded-lg transition-colors',
             'text-white/40 hover:bg-white/5 hover:text-white',
-            isMobile ? 'min-h-[40px] min-w-[40px] p-2' : 'p-2'
+            isMobile ? 'min-h-[44px] min-w-[44px] p-2' : 'p-2'
           )}
-          title="Copy selection"
+          aria-label="Copy selection"
         >
           {copied ? (
             <Check className={cn('text-emerald-400', isMobile ? 'h-5 w-5' : 'h-4 w-4')} />
@@ -104,12 +104,13 @@ export function Toolbar({
           onClick={onToggleSearch}
           className={cn(
             'touch-manipulation rounded-lg transition-colors',
-            isMobile ? 'min-h-[40px] min-w-[40px] p-2' : 'p-2',
+            isMobile ? 'min-h-[44px] min-w-[44px] p-2' : 'p-2',
             searchVisible
               ? 'bg-white/10 text-white'
               : 'text-white/40 hover:bg-white/5 hover:text-white'
           )}
-          title="Search (⌘⇧F)"
+          aria-label="Search"
+          aria-pressed={searchVisible}
         >
           <Search className={isMobile ? 'h-5 w-5' : 'h-4 w-4'} />
         </button>

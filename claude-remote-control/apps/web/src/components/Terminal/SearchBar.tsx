@@ -32,30 +32,31 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder="Search in terminal..."
+          aria-label="Search in terminal"
           className={cn(
             'flex-1 bg-transparent text-sm text-white placeholder:text-white/30',
-            'focus:outline-none'
+            'focus:outline-none focus-visible:ring-1 focus-visible:ring-orange-500/50'
           )}
         />
         <div className="flex items-center gap-1">
           <button
             onClick={onFindPrevious}
-            className="rounded p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
-            title="Previous (⇧↵)"
+            className="rounded p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-1 focus-visible:ring-orange-500/50"
+            aria-label="Find previous"
           >
             <ChevronUp className="h-4 w-4" />
           </button>
           <button
             onClick={onFindNext}
-            className="rounded p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
-            title="Next (↵)"
+            className="rounded p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-1 focus-visible:ring-orange-500/50"
+            aria-label="Find next"
           >
             <ChevronDown className="h-4 w-4" />
           </button>
           <button
             onClick={onClose}
-            className="rounded p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
-            title="Close (Esc)"
+            className="rounded p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-1 focus-visible:ring-orange-500/50"
+            aria-label="Close search"
           >
             <X className="h-4 w-4" />
           </button>

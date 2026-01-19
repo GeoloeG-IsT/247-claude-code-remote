@@ -19,9 +19,10 @@ export function ScrollToBottomButton({ visible, onClick }: ScrollToBottomButtonP
         'bg-orange-500/90 backdrop-blur-sm hover:bg-orange-400',
         'rounded-full text-white shadow-xl shadow-orange-500/30',
         'transition-all hover:scale-105 active:scale-95',
-        'animate-bounce'
+        'animate-bounce',
+        'focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d0d14]'
       )}
-      title="Scroll to bottom"
+      aria-label="Scroll to bottom"
     >
       <ArrowDown className="h-5 w-5" />
     </button>

@@ -72,12 +72,16 @@ export function GlobalSessionCard({ session, onClick }: GlobalSessionCardProps) 
         </div>
 
         {/* Arrow indicator on hover */}
-        <div className="self-center opacity-0 transition-opacity group-hover:opacity-100">
+        <div
+          className="self-center opacity-0 transition-opacity group-hover:opacity-100"
+          aria-hidden="true"
+        >
           <svg
             className="h-5 w-5 text-white/30"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            aria-hidden="true"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>

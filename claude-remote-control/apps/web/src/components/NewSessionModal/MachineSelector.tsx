@@ -29,8 +29,14 @@ export function MachineSelector({
 
   return (
     <div>
-      <label className="mb-3 block text-sm font-medium text-white/60">Select Machine</label>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <span id="machine-selector-label" className="mb-3 block text-sm font-medium text-white/60">
+        Select Machine
+      </span>
+      <div
+        role="group"
+        aria-labelledby="machine-selector-label"
+        className="grid grid-cols-2 gap-3 sm:grid-cols-3"
+      >
         {onlineMachines.map((machine) => (
           <button
             key={machine.id}

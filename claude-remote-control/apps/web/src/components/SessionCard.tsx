@@ -100,9 +100,10 @@ export const SessionCard = forwardRef<HTMLButtonElement, SessionCardProps>(
                   'absolute -right-1 -top-1 rounded-full p-1',
                   'bg-red-500/80 text-white hover:bg-red-500',
                   'opacity-0 transition-opacity group-hover:opacity-100',
-                  'shadow-lg'
+                  'shadow-lg',
+                  'focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-white/50'
                 )}
-                title="Kill session"
+                aria-label="Kill session"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -136,17 +137,19 @@ export const SessionCard = forwardRef<HTMLButtonElement, SessionCardProps>(
 
     return (
       <>
-        <div
-          ref={ref as any}
+        <button
+          ref={ref}
           onClick={onClick}
+          aria-label={`Session ${displayName} - ${session.project}`}
           className={cn(
-            'group relative w-full cursor-pointer rounded-xl p-3 text-left transition-all',
+            'group relative w-full rounded-xl p-3 text-left transition-all',
             'touch-manipulation border',
             // Mobile: larger padding and minimum height for touch
             isMobile && 'min-h-[72px] p-4',
             isActive
               ? 'border-orange-500/30 bg-gradient-to-r from-white/10 to-white/5 shadow-lg shadow-orange-500/20'
-              : 'border-transparent hover:border-white/10 hover:bg-white/5'
+              : 'border-transparent hover:border-white/10 hover:bg-white/5',
+            'focus-visible:ring-2 focus-visible:ring-orange-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d0d14]'
           )}
         >
           {/* Action buttons - expanded mode (always visible on mobile) */}
@@ -165,10 +168,11 @@ export const SessionCard = forwardRef<HTMLButtonElement, SessionCardProps>(
                   'rounded-lg',
                   'bg-transparent text-gray-400 hover:bg-gray-500/20 hover:text-gray-300',
                   'touch-manipulation transition-all',
+                  'focus-visible:ring-1 focus-visible:ring-orange-500/50',
                   // Mobile: larger touch target
                   isMobile ? 'min-h-[44px] min-w-[44px] p-2.5' : 'p-1.5'
                 )}
-                title="Archive session"
+                aria-label="Archive session"
               >
                 <Archive className={isMobile ? 'h-5 w-5' : 'h-4 w-4'} />
               </button>
@@ -181,10 +185,11 @@ export const SessionCard = forwardRef<HTMLButtonElement, SessionCardProps>(
                   'rounded-lg',
                   'bg-transparent text-red-400 hover:bg-red-500/20 hover:text-red-300',
                   'touch-manipulation transition-all',
+                  'focus-visible:ring-1 focus-visible:ring-orange-500/50',
                   // Mobile: larger touch target
                   isMobile ? 'min-h-[44px] min-w-[44px] p-2.5' : 'p-1.5'
                 )}
-                title="Kill session"
+                aria-label="Kill session"
               >
                 <X className={isMobile ? 'h-5 w-5' : 'h-4 w-4'} />
               </button>
@@ -261,7 +266,7 @@ export const SessionCard = forwardRef<HTMLButtonElement, SessionCardProps>(
               )}
             </div>
           </div>
-        </div>
+        </button>
 
         <ConfirmDialog
           open={showKillConfirm}

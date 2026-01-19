@@ -37,9 +37,9 @@ function KeyButton({ onClick, children, label, className }: KeyButtonProps) {
         'rounded-lg bg-white/5 text-white/70 transition-all',
         'active:scale-95 active:bg-white/10 active:text-white',
         'hover:bg-white/8',
+        'focus-visible:ring-2 focus-visible:ring-orange-500/50 focus-visible:ring-offset-1 focus-visible:ring-offset-[#0d0d14]',
         className
       )}
-      title={label}
       aria-label={label}
     >
       {children}

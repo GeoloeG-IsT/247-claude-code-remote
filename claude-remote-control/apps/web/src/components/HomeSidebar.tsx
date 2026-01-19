@@ -228,6 +228,7 @@ export function HomeSidebar({
                 <input
                   type="text"
                   placeholder="Search sessions..."
+                  aria-label="Search sessions"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className={cn(
@@ -294,9 +295,11 @@ export function HomeSidebar({
             <div className="mt-4 border-t border-white/5 pt-4">
               <button
                 onClick={() => setHistoryCollapsed(!historyCollapsed)}
-                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/5"
+                aria-expanded={!historyCollapsed}
+                aria-controls="history-section"
+                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/5 focus-visible:ring-1 focus-visible:ring-orange-500/50"
               >
-                <Archive className="h-4 w-4 text-white/40" />
+                <Archive className="h-4 w-4 text-white/40" aria-hidden="true" />
                 <span className="text-xs font-medium text-white/50">Historique</span>
                 <span className="ml-1 text-xs text-white/30">({archivedSessions.length})</span>
                 <ChevronDown
@@ -304,12 +307,14 @@ export function HomeSidebar({
                     'ml-auto h-3 w-3 text-white/40 transition-transform',
                     historyCollapsed && '-rotate-90'
                   )}
+                  aria-hidden="true"
                 />
               </button>
 
               <AnimatePresence>
                 {!historyCollapsed && (
                   <motion.div
+                    id="history-section"
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
@@ -433,9 +438,10 @@ export function HomeSidebar({
                 <h3 className="text-lg font-semibold text-white">Keyboard Shortcuts</h3>
                 <button
                   onClick={() => setShowShortcuts(false)}
-                  className="rounded-lg p-1 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+                  aria-label="Close shortcuts"
+                  className="rounded-lg p-1 text-white/50 transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-1 focus-visible:ring-orange-500/50"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-5 w-5" aria-hidden="true" />
                 </button>
               </div>
 
