@@ -27,17 +27,12 @@ cd "$CLI_DIR"
 rm -rf hooks
 mkdir -p hooks
 
-# Copy the Claude Code plugin structure
-if [ -d "../hooks/.claude-plugin" ]; then
-  cp -r ../hooks/.claude-plugin hooks/
-fi
-
-if [ -d "../hooks/hooks" ]; then
-  cp -r ../hooks/hooks hooks/
-fi
-
-if [ -d "../hooks/scripts" ]; then
-  cp -r ../hooks/scripts hooks/
+# Copy the main hook script
+if [ -f "../hooks/notify-247.sh" ]; then
+  cp ../hooks/notify-247.sh hooks/
+  chmod +x hooks/notify-247.sh
+else
+  echo "Warning: Hook script not found at ../hooks/notify-247.sh"
 fi
 
 # Copy agent dist

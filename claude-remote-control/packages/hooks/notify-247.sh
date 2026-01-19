@@ -1,6 +1,6 @@
 #!/bin/bash
 # 247 Hook Script for Claude Code
-# VERSION: 2.28.2
+# VERSION: 2.31.2
 # Ultra simple: hook called = needs_attention
 set -euo pipefail
 
