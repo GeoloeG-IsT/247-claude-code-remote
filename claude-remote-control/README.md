@@ -26,7 +26,7 @@
 
 Sessions persist forever with tmux. Disconnect and reconnect anytime. Your AI keeps working.
 
-<!-- TODO: Add demo GIF here -->
+<!-- Demo GIF coming soon -->
 
 ![247 Demo](demo.gif)
 
