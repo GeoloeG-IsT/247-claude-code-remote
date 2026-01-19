@@ -37,19 +37,36 @@ export function usePushNotifications() {
   // Check initial state
   useEffect(() => {
     const checkSupport = async () => {
-      const isSupported =
+      const hasApis =
         'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 
-      if (!isSupported) {
+      if (!hasApis) {
         setState((s) => ({ ...s, isSupported: false, isLoading: false }));
         return;
       }
 
       const permission = Notification.permission;
 
-      // Check if already subscribed
+      // Check if service worker is registered (with timeout for dev mode)
       try {
-        const registration = await navigator.serviceWorker.ready;
+        // Wait for service worker with 3s timeout
+        const registration = await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+        ]);
+
+        if (!registration) {
+          // No service worker registered (probably dev mode)
+          setState({
+            isSupported: true,
+            isSubscribed: false,
+            permission,
+            isLoading: false,
+            error: null,
+          });
+          return;
+        }
+
         const subscription = await registration.pushManager.getSubscription();
         setState({
           isSupported: true,
