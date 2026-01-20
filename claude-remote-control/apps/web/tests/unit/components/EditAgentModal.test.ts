@@ -46,11 +46,11 @@ describe('EditAgentModal', () => {
   });
 
   describe('Component behavior', () => {
-    let mockOnSave: ReturnType<typeof vi.fn>;
+    let mockOnSave: ReturnType<typeof vi.fn<(id: string, data: { name: string; color?: string }) => Promise<void>>>;
     let mockOnClose: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
-      mockOnSave = vi.fn().mockResolvedValue(undefined);
+      mockOnSave = vi.fn<(id: string, data: { name: string; color?: string }) => Promise<void>>().mockResolvedValue(undefined);
       mockOnClose = vi.fn();
     });
 
