@@ -2,11 +2,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import * as child_process from 'child_process';
 
 // Mock fs and os
 vi.mock('fs');
 vi.mock('os', () => ({
   tmpdir: vi.fn(() => '/tmp'),
+  userInfo: vi.fn(() => ({ username: 'testuser' })),
+}));
+
+// Mock child_process for detectUserShell fallback
+vi.mock('child_process', () => ({
+  execSync: vi.fn(),
 }));
 
 describe('init-script', () => {
@@ -213,9 +220,25 @@ describe('init-script', () => {
       expect(detectUserShell()).toBe('bash');
     });
 
-    it('defaults to bash when SHELL is undefined', async () => {
+    it('falls back to /etc/passwd when SHELL is undefined', async () => {
       delete process.env.SHELL;
       vi.resetModules();
+
+      // Mock execSync to return zsh from /etc/passwd
+      vi.mocked(child_process.execSync).mockReturnValue('/usr/bin/zsh\n');
+
+      const { detectUserShell } = await import('../../src/lib/init-script.js');
+      expect(detectUserShell()).toBe('zsh');
+    });
+
+    it('defaults to bash when SHELL is undefined and /etc/passwd lookup fails', async () => {
+      delete process.env.SHELL;
+      vi.resetModules();
+
+      // Mock execSync to throw (simulating getent failure)
+      vi.mocked(child_process.execSync).mockImplementation(() => {
+        throw new Error('Command failed');
+      });
 
       const { detectUserShell } = await import('../../src/lib/init-script.js');
       expect(detectUserShell()).toBe('bash');

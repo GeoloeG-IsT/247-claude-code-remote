@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { execSync } from 'child_process';
 
 export interface InitScriptOptions {
   sessionName: string;
@@ -13,11 +14,27 @@ export interface InitScriptOptions {
 }
 
 /**
- * Detects the user's default shell from environment.
+ * Detects the user's default shell from environment or /etc/passwd.
+ * Falls back to bash if detection fails.
  */
 export function detectUserShell(): 'bash' | 'zsh' {
-  const shell = process.env.SHELL || '';
-  if (shell.includes('zsh')) return 'zsh';
+  // First try environment variable
+  const envShell = process.env.SHELL || '';
+  if (envShell.includes('zsh')) return 'zsh';
+  if (envShell.includes('bash')) return 'bash';
+
+  // If SHELL is not set (e.g., running as a service), read from /etc/passwd
+  try {
+    const user = process.env.USER || process.env.LOGNAME || os.userInfo().username;
+    const result = execSync(`getent passwd ${user} | cut -d: -f7`, {
+      encoding: 'utf-8',
+      timeout: 1000,
+    }).trim();
+    if (result.includes('zsh')) return 'zsh';
+  } catch {
+    // Ignore errors, fall back to bash
+  }
+
   return 'bash';
 }
 
