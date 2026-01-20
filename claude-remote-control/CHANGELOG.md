@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.35.0] - 2026-01-20
+
+### Features
+
+- **agents**: add machine renaming and color customization (bc6a039)
+- add dead code detection with knip (74a0454)
+
+### Bug Fixes
+
+- **pwa**: add timeout on pushManager.subscribe() for iOS (5ef4d98)
+- **pwa**: fix macOS notification click handling (c5abbf8)
+- **pwa**: fix push notification handler to not block on badge API (6a1a626)
+
+### Chores
+
+- **release**: v2.34.3 (9d9f3a8)
+- **release**: v2.34.2 (a5eae4d)
+- **release**: v2.34.1 (884e17d)
+
 ## [2.34.3] - 2026-01-20
 
 ### Bug Fixes
