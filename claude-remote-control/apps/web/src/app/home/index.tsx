@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { Zap, Loader2, ArrowDown } from 'lucide-react';
+import { toast } from 'sonner';
 import { buildApiUrl } from '@/lib/utils';
 import { SessionView } from '@/components/SessionView';
 import { NewSessionModal } from '@/components/NewSessionModal';
@@ -202,18 +203,60 @@ export function HomeContent() {
 
   // Handler pour kill depuis SessionListPanel
   const handleKillSessionFromList = useCallback(
-    (item: SessionListItem) => {
-      handleSessionKilled(item.machineId!, item.name);
+    async (item: SessionListItem) => {
+      const machine = agentConnections.find((c) => c.id === item.machineId);
+      if (!machine) {
+        toast.error('Agent not found');
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          buildApiUrl(machine.url, `/api/sessions/${encodeURIComponent(item.name)}`),
+          { method: 'DELETE' }
+        );
+
+        if (response.ok) {
+          toast.success('Session terminated');
+          handleSessionKilled(item.machineId!, item.name);
+        } else {
+          toast.error('Failed to terminate session');
+        }
+      } catch (err) {
+        console.error('Failed to kill session:', err);
+        toast.error('Could not connect to agent');
+      }
     },
-    [handleSessionKilled]
+    [agentConnections, handleSessionKilled]
   );
 
   // Handler pour archive depuis SessionListPanel
   const handleArchiveSessionFromList = useCallback(
-    (item: SessionListItem) => {
-      handleSessionArchived(item.machineId!, item.name);
+    async (item: SessionListItem) => {
+      const machine = agentConnections.find((c) => c.id === item.machineId);
+      if (!machine) {
+        toast.error('Agent not found');
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          buildApiUrl(machine.url, `/api/sessions/${encodeURIComponent(item.name)}/archive`),
+          { method: 'POST' }
+        );
+
+        if (response.ok) {
+          toast.success('Session archived');
+          handleSessionArchived(item.machineId!, item.name);
+        } else {
+          toast.error('Failed to archive session');
+        }
+      } catch (err) {
+        console.error('Failed to archive session:', err);
+        toast.error('Could not connect to agent');
+      }
     },
-    [handleSessionArchived]
+    [agentConnections, handleSessionArchived]
   );
 
   // Create agent status and session count maps for UnifiedAgentManager
