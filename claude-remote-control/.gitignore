@@ -38,3 +38,6 @@ apps/agent/data/
 .vercel
 .env*.local
 apps/web/next-env.d.ts
+
+# Claude Code local settings
+**/.claude/
