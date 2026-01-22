@@ -245,7 +245,12 @@ export function AppHeader({
 
         {!isMobile && (
           <>
-            <IconButton icon={<Bell className="h-5 w-5" />} label="Notifications" badge={2} />
+            <IconButton
+              icon={<Bell className="h-5 w-5" />}
+              label="Notifications"
+              badge={2}
+              onClick={onOpenNotificationSettings}
+            />
             {onToggleFullscreen && (
               <IconButton
                 icon={
