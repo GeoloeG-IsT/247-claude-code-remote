@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.41.3] - 2026-01-28
+
+### Bug Fixes
+
+- **cli**: auto-rebuild native modules when Node.js version changes (2c2e5ea)
+
 ## [2.41.2] - 2026-01-22
 
 ### Bug Fixes
