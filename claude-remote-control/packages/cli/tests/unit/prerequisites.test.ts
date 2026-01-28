@@ -260,4 +260,127 @@ describe('Prerequisites', () => {
       expect(checkNode).toBe(checkNodeVersion);
     });
   });
+
+  describe('ABI version tracking', () => {
+    let tmpDir: string;
+
+    beforeEach(async () => {
+      const os = await import('os');
+      const path = await import('path');
+      const fs = await import('fs');
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), '247-test-'));
+      fs.mkdirSync(path.join(tmpDir, '.247'), { recursive: true });
+      process.env.AGENT_247_HOME = tmpDir;
+    });
+
+    afterEach(async () => {
+      delete process.env.AGENT_247_HOME;
+      const fs = await import('fs');
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    it('getStoredAbiVersion returns null when no file exists', async () => {
+      const { getStoredAbiVersion } = await import('../../src/lib/prerequisites.js');
+
+      expect(getStoredAbiVersion()).toBeNull();
+    });
+
+    it('storeAbiVersion writes current ABI version', async () => {
+      const { storeAbiVersion, getStoredAbiVersion } =
+        await import('../../src/lib/prerequisites.js');
+
+      storeAbiVersion();
+      expect(getStoredAbiVersion()).toBe(process.versions.modules);
+    });
+
+    it('isAbiVersionChanged returns false when no stored version', async () => {
+      const { isAbiVersionChanged } = await import('../../src/lib/prerequisites.js');
+
+      expect(isAbiVersionChanged()).toBe(false);
+    });
+
+    it('isAbiVersionChanged returns false when versions match', async () => {
+      const fs = await import('fs');
+      const path = await import('path');
+      fs.writeFileSync(path.join(tmpDir, '.247', 'node-abi-version'), process.versions.modules);
+
+      const { isAbiVersionChanged } = await import('../../src/lib/prerequisites.js');
+
+      expect(isAbiVersionChanged()).toBe(false);
+    });
+
+    it('isAbiVersionChanged returns true when versions differ', async () => {
+      const fs = await import('fs');
+      const path = await import('path');
+      fs.writeFileSync(path.join(tmpDir, '.247', 'node-abi-version'), '999');
+
+      const { isAbiVersionChanged } = await import('../../src/lib/prerequisites.js');
+
+      expect(isAbiVersionChanged()).toBe(true);
+    });
+  });
+
+  describe('rebuildNativeModules', () => {
+    it('runs npm rebuild with correct modules', async () => {
+      const { execSync } = await import('child_process');
+      vi.mocked(execSync).mockReturnValue('');
+
+      const { rebuildNativeModules } = await import('../../src/lib/prerequisites.js');
+
+      const result = rebuildNativeModules();
+
+      expect(result.success).toBe(true);
+      expect(vi.mocked(execSync)).toHaveBeenCalledWith(
+        'npm rebuild better-sqlite3 @homebridge/node-pty-prebuilt-multiarch',
+        expect.objectContaining({
+          timeout: 120_000,
+        })
+      );
+    });
+
+    it('returns error when rebuild fails', async () => {
+      const { execSync } = await import('child_process');
+      vi.mocked(execSync).mockImplementation(() => {
+        throw new Error('rebuild failed');
+      });
+
+      const { rebuildNativeModules } = await import('../../src/lib/prerequisites.js');
+
+      const result = rebuildNativeModules();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('rebuild failed');
+    });
+  });
+
+  describe('ensureNativeModules', () => {
+    let tmpDir: string;
+
+    beforeEach(async () => {
+      const os = await import('os');
+      const path = await import('path');
+      const fs = await import('fs');
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), '247-test-'));
+      fs.mkdirSync(path.join(tmpDir, '.247'), { recursive: true });
+      process.env.AGENT_247_HOME = tmpDir;
+    });
+
+    afterEach(async () => {
+      delete process.env.AGENT_247_HOME;
+      const fs = await import('fs');
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    it('stores ABI version after successful check', async () => {
+      const { ensureNativeModules, getStoredAbiVersion } =
+        await import('../../src/lib/prerequisites.js');
+
+      const result = await ensureNativeModules();
+
+      // In test env, native modules should load fine
+      if (result.status === 'ok') {
+        expect(getStoredAbiVersion()).toBe(process.versions.modules);
+      }
+    });
+  });
 });

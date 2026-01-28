@@ -26,6 +26,7 @@ vi.mock('../../../src/lib/prerequisites.js', () => ({
   checkNode: vi.fn(),
   checkTmux: vi.fn(),
   checkNativeDeps: vi.fn(),
+  getStoredAbiVersion: vi.fn().mockReturnValue(null),
 }));
 
 // Mock config

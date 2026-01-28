@@ -7,6 +7,7 @@ import { existsSync } from 'fs';
 import { loadConfig, configExists, getProfilePath } from '../lib/config.js';
 import { getAgentPaths } from '../lib/paths.js';
 import { startAgentDaemon, isAgentRunning } from '../lib/process.js';
+import { isAbiVersionChanged, ensureNativeModules } from '../lib/prerequisites.js';
 
 export const startCommand = new Command('start')
   .description('Start the 247 agent')
@@ -33,6 +34,24 @@ export const startCommand = new Command('start')
     if (!config) {
       console.log(chalk.red('Failed to load configuration.\n'));
       process.exit(1);
+    }
+
+    // Check native module compatibility (auto-rebuild if Node version changed)
+    if (isAbiVersionChanged()) {
+      const rebuildSpinner = ora('Node version changed, rebuilding native modules...').start();
+      const nativeCheck = await ensureNativeModules();
+      if (nativeCheck.status === 'ok') {
+        rebuildSpinner.succeed('Native modules rebuilt successfully');
+      } else {
+        rebuildSpinner.fail(nativeCheck.message);
+        process.exit(1);
+      }
+    } else {
+      const nativeCheck = await ensureNativeModules();
+      if (nativeCheck.status === 'error') {
+        console.log(chalk.red(`${nativeCheck.message}\n`));
+        process.exit(1);
+      }
     }
 
     // Check if already running

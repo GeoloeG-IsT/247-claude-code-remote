@@ -1,7 +1,12 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { existsSync } from 'fs';
-import { checkNode, checkTmux, checkNativeDeps } from '../lib/prerequisites.js';
+import {
+  checkNode,
+  checkTmux,
+  checkNativeDeps,
+  getStoredAbiVersion,
+} from '../lib/prerequisites.js';
 import { configExists, loadConfig } from '../lib/config.js';
 import { isAgentRunning, getAgentHealth } from '../lib/process.js';
 import { createServiceManager } from '../service/index.js';
@@ -55,6 +60,24 @@ export const doctorCommand = new Command('doctor')
       message: nativeCheck.message,
       hint: nativeCheck.status === 'error' ? 'Try reinstalling: npm install -g 247-cli' : undefined,
     });
+
+    // 3b. Check Node ABI version
+    const storedAbi = getStoredAbiVersion();
+    const currentAbi = process.versions.modules;
+    if (storedAbi && storedAbi !== currentAbi) {
+      results.push({
+        name: 'Node ABI version',
+        status: 'warn',
+        message: `Changed (${storedAbi} → ${currentAbi}). Will rebuild on next start.`,
+        hint: 'Run "247 start" to auto-rebuild, or "npm rebuild -g 247-cli"',
+      });
+    } else {
+      results.push({
+        name: 'Node ABI version',
+        status: 'pass',
+        message: `${currentAbi} (Node ${process.version})`,
+      });
+    }
 
     // 4. Check configuration
     if (configExists()) {
