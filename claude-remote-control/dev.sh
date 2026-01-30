@@ -9,7 +9,7 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 tmux kill-session -t $SESSION 2>/dev/null
 
 # Create new session with web server
-tmux new-session -d -s $SESSION -n dev -c "$DIR"
+tmux -f "$DIR/dev.tmux.conf" new-session -d -s $SESSION -n dev -c "$DIR"
 tmux send-keys -t $SESSION "pnpm dev:web" C-m
 
 # Split horizontally and start agent
