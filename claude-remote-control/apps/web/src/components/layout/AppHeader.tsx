@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Menu,
   Plus,
-  HelpCircle,
   Settings,
   User,
   LogOut,
@@ -297,8 +296,6 @@ export function AppHeader({
 
       {/* Right Section */}
       <div className="flex items-center gap-2">
-        <IconButton icon={<HelpCircle className="h-5 w-5" />} label="Help" />
-
         {!isMobile && (
           <>
             <IconButton
