@@ -154,9 +154,6 @@ export function Terminal({
         ref={terminalRef}
         className="min-h-0 w-full flex-1 overflow-hidden bg-[#0a0a10]"
         style={isMobile ? { touchAction: 'none' } : undefined}
-        onContextMenu={async (e) => {
-          e.preventDefault();
-        }}
       />
 
       <ScrollToBottomButton visible={!isAtBottom} onClick={scrollToBottom} />
